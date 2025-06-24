@@ -16,21 +16,10 @@ func main() {
 
 	store.InitRedis()
 
-	err := store.Client.Set(store.Ctx, "foo", "bar", 0).Err()
-	if err != nil {
-		panic(err)
-	}
-
-	val, err := store.Client.Get(store.Ctx, "foo").Result()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("foo", val)
-
 	r := http.NewServeMux()
 	r.HandleFunc("/", handler)
 	r.HandleFunc("/create-room", room.CreateRoomHandler)
+	r.HandleFunc("/join-room", room.JoinRoomHandler)
 	log.Println("Server on :8080")
 	http.ListenAndServe(":8080", r)
 }
