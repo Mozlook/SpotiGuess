@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -18,17 +19,8 @@ type Room struct {
 	Scoreboard  map[string]int
 }
 
-type Player struct {
-	PlayerId string
-	Score    int
-}
-
 type CreateRoomRequest struct {
 	HostID string `json:"hostId"`
-}
-
-type RoomResponse struct {
-	RoomCode string `json:"roomCode"`
 }
 
 type JoinRoomRequest struct {
@@ -96,12 +88,41 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response := new(RoomResponse)
-	response.RoomCode = Code
-	err = json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(map[string]string{
+		"RoomCode": Code,
+	})
 
 }
 
+// JoinRoomHandler handles HTTP POST requests to /join-room.
+//
+// It expects a JSON payload in the following format:
+//
+//	{
+//	  "roomCode": "ABC123",
+//	  "playerId": "spotify-user-456"
+//	}
+//
+// The handler performs the following steps:
+//
+//  1. Decodes the JSON request body into a JoinRoomRequest struct.
+//
+//  2. Retrieves the Room object from Redis using the provided room code.
+//
+//  3. Adds the player ID to the room's Players list.
+//
+//  4. Updates the room object in Redis with a new 60-minute TTL.
+//
+//  5. Responds with a JSON object confirming the join:
+//
+//     Response:
+//     {
+//     "status": "joined",
+//     "roomCode": "ABC123",
+//     "playerId": "spotify-user-456"
+//     }
+//
+// In case of an error (e.g. room not found, JSON parsing error), responds with an appropriate HTTP status code.
 func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	var request JoinRoomRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -136,4 +157,55 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		"roomCode": request.RoomCode,
 		"playerId": request.PlayerID,
 	})
+}
+
+// GetRoomHandler handles HTTP GET requests to /room/{code}.
+//
+// It extracts the room code from the URL path, for example:
+//
+//	GET /room/ABC123
+//
+// The handler performs the following steps:
+//
+//  1. Parses the room code from the URL path.
+//
+//  2. Retrieves the Room object from Redis.
+//
+//  3. Deserializes the JSON data into a Room struct.
+//
+//  4. Responds with the full Room data in JSON format:
+//
+//     Response:
+//     {
+//     "code": "ABC123",
+//     "hostId": "host123",
+//     "createdAt": "...",
+//     "players": ["player1", "player2"],
+//     "gameState": "waiting",
+//     "currentQIdx": 0,
+//     "scoreboard": { ... }
+//     }
+//
+// If the room does not exist or the URL is malformed, responds with a 404 or 500 status code.
+func GetRoomHandler(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 3 {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	roomCode := parts[2]
+	data, err := store.Client.Get(store.Ctx, roomCode).Result()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var room Room
+	err = json.Unmarshal([]byte(data), &room)
+	if err != nil {
+		http.Error(w, "failed to parse room data", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(room)
 }
