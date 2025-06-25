@@ -189,7 +189,7 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 // If the room does not exist or the URL is malformed, responds with a 404 or 500 status code.
 func GetRoomHandler(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) < 3 || parts[2] == "" {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
@@ -200,7 +200,6 @@ func GetRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	var room Room
 	err = json.Unmarshal([]byte(data), &room)
 	if err != nil {
