@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -21,6 +22,16 @@ type recentlyPlayedResponse struct {
 			} `json:"artists"`
 		} `json:"track"`
 	} `json:"items"`
+}
+
+type recommendationResponse struct {
+	Tracks []struct {
+		Name string `json:"name"`
+		// (opcjonalnie)
+		Artists []struct {
+			Name string `json:"name"`
+		} `json:"artists"`
+	} `json:"tracks"`
 }
 
 func FetchRecentTracks(token string) ([]Track, error) {
@@ -55,4 +66,29 @@ func FetchRecentTracks(token string) ([]Track, error) {
 		})
 	}
 	return tracks, nil
+}
+
+func FetchRecommendations(trackID string, token string) ([]string, error) {
+	url := fmt.Sprintf("https://api.spotify.com/v1/recommendations?seed_tracks=%s&limit=3&market=PL", trackID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var apiResp recommendationResponse
+
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&apiResp)
+	if err != nil {
+		return nil, err
+	}
+	var fakeAnswers []string
+	for _, track := range apiResp.Tracks {
+		fakeAnswers = append(fakeAnswers, track.Name)
+	}
+
+	return fakeAnswers, nil
 }

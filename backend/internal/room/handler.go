@@ -1,8 +1,10 @@
 package room
 
 import (
+	"backend/internal/spotify"
 	"backend/internal/store"
 	"encoding/json"
+	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -152,6 +154,24 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		token = strings.TrimSpace(token)
+		tracks, err := spotify.FetchRecentTracks(token)
+		if err != nil {
+			panic(err)
+		}
+		jsonData, _ := json.Marshal(tracks)
+
+		err = store.Client.Set(store.Ctx, "tracks:"+request.RoomCode+":"+request.PlayerID, jsonData, 60*time.Minute).Err()
+
+		if err != nil {
+			log.Println("error saving tracks:", err)
+		}
+	}
+
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "joined",
 		"roomCode": request.RoomCode,
