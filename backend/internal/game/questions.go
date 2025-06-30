@@ -13,11 +13,6 @@ type Question struct {
 	AnswerOptions []string `json:"options"`
 	CorrectAnswer string   `json:"correct"`
 }
-type Track struct {
-	ID      string
-	Name    string
-	Artists []string
-}
 
 // GenerateQuestions builds a list of quiz questions based on Spotify track data.
 //
@@ -41,7 +36,7 @@ type Track struct {
 // Returns:
 // - A slice of Question structs
 // - Or an error if fetching recommendations fails for any track
-func GenerateQuestions(tracks []Track, token string) ([]Question, error) {
+func GenerateQuestions(tracks []spotify.Track, token string) ([]Question, error) {
 	var questions []Question
 	for i, track := range tracks {
 		var question Question
