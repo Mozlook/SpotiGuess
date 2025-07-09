@@ -9,12 +9,21 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
 type StartGameRequest struct {
 	RoomCode string `json:"roomCode"`
 	HostId   string `json:"hostId"`
+}
+
+type AnswerRequest struct {
+	RoomCode   string `json:"roomCode"`
+	QuestionId string `json:"questionId"`
+	Selected   string `json:"selected"`
+	PlayerId   string `json:"playerId"`
 }
 
 // StartGameHandler handles HTTP POST requests to /start-game.
@@ -61,7 +70,8 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	data, err := store.Client.Get(store.Ctx, request.RoomCode).Result()
+	roomKey := "room:" + request.RoomCode
+	data, err := store.Client.Get(store.Ctx, roomKey).Result()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -134,4 +144,139 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		"questionsCount": len(questions),
 	})
 
+}
+
+// GetQuestionsHandler handles HTTP GET requests to /room/{code}/questions.
+//
+// It expects the room code to be embedded in the URL path as the third segment,
+// followed by the "questions" keyword, e.g.:
+//
+//	GET /room/ABC123/questions
+//
+// The handler performs the following steps:
+//
+//  1. Parses the room code from the URL.
+//
+//  2. Retrieves the list of quiz questions for that room from Redis,
+//     stored under the key "questions:{roomCode}".
+//
+//  3. Deserializes the stored JSON into a slice of Question structs.
+//
+//  4. Responds with the full list of questions as a JSON array:
+//
+//     Response:
+//     [
+//     { "id": "q1", "trackId": "...", "trackName": "...", "options": [...], "correct": "..." },
+//     ...
+//     ]
+//
+// If the room or questions cannot be found, responds with HTTP 500.
+func GetQuestionsHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	key := "questions:" + parts[2]
+	raw, err := store.Client.Get(store.Ctx, key).Result()
+	if err != nil {
+		http.Error(w, "Failed to get questions", http.StatusInternalServerError)
+		return
+	}
+	var questions []Question
+	err = json.Unmarshal([]byte(raw), &questions)
+	if err != nil {
+		http.Error(w, "Failed to parse questions", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(questions)
+}
+
+// SubmitAnswerHandler handles HTTP POST requests to /submit-answer.
+//
+// It expects a JSON payload in the following format:
+//
+//	{
+//	  "roomCode": "ABC123",
+//	  "questionId": "q1",
+//	  "selected": "Photograph",
+//	  "playerId": "spotify-user-456"
+//	}
+//
+// The handler performs the following steps:
+//
+//  1. Retrieves the question list for the specified room from Redis ("questions:{roomCode}").
+//
+//  2. Locates the question matching the given questionId.
+//
+//  3. Compares the player's selected answer to the correct answer.
+//
+//  4. Retrieves the player's current score from Redis (under "score:{roomCode}:{playerId}"),
+//     or initializes it to 0 if not found.
+//
+//  5. If the answer is correct, adds 1000 points to the player's score and updates the Redis entry.
+//
+//  6. Responds with a JSON object indicating whether the answer was correct and the player's updated score:
+//
+//     Response:
+//     {
+//     "correct": true,
+//     "score": 2000
+//     }
+//
+// In case of an error (e.g. invalid request, question not found, Redis error), responds with the appropriate HTTP status code.
+func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
+	var request AnswerRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	key := "questions:" + request.RoomCode
+	data, err := store.Client.Get(store.Ctx, key).Result()
+	if err != nil {
+		http.Error(w, "Failed to get questions", http.StatusInternalServerError)
+		return
+	}
+
+	var questions []Question
+	err = json.Unmarshal([]byte(data), &questions)
+	if err != nil {
+		http.Error(w, "Invalid questions data", http.StatusInternalServerError)
+		return
+	}
+	var question Question
+	found := false
+	for _, q := range questions {
+		if q.ID == request.QuestionId {
+			question = q
+			found = true
+			break
+		}
+	}
+	if !found {
+		http.Error(w, "Question not found", http.StatusNotFound)
+		return
+	}
+	scoreKey := fmt.Sprintf("score:%s:%s", request.RoomCode, request.PlayerId)
+	currentScore := 0
+
+	rawScore, err := store.Client.Get(store.Ctx, scoreKey).Result()
+	if err == nil {
+		currentScore, err = strconv.Atoi(rawScore)
+		if err != nil {
+			log.Println("Invalid score in Redis, resetting to 0")
+			currentScore = 0
+		}
+	}
+
+	if request.Selected == question.CorrectAnswer {
+		currentScore += 1000
+		store.Client.Set(store.Ctx, scoreKey, currentScore, 60*time.Minute)
+		if err != nil {
+			log.Println("Failed to update score:", err)
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"correct": request.Selected == question.CorrectAnswer,
+		"score":   currentScore,
+	})
 }

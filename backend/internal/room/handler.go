@@ -85,7 +85,8 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	room.GameState = "waiting"
 
 	data, _ := json.Marshal(room)
-	err = store.Client.Set(store.Ctx, Code, data, 60*time.Minute).Err()
+	roomKey := "room:" + Code
+	err = store.Client.Set(store.Ctx, roomKey, data, 60*time.Minute).Err()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -132,8 +133,8 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	data, err := store.Client.Get(store.Ctx, request.RoomCode).Result()
+	roomKey := "room:" + request.RoomCode
+	data, err := store.Client.Get(store.Ctx, roomKey).Result()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -214,8 +215,8 @@ func GetRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomCode := parts[2]
-	data, err := store.Client.Get(store.Ctx, roomCode).Result()
+	roomKey := "room:" + parts[2]
+	data, err := store.Client.Get(store.Ctx, roomKey).Result()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
