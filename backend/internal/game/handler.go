@@ -359,3 +359,86 @@ func GetScoreboardHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+
+// GetNextQuestionHandler handles HTTP GET requests to /room/{code}/next-question.
+//
+// It expects the room code to be embedded in the URL path, for example:
+//
+//	GET /room/ABC123/next-question
+//
+// The handler performs the following steps:
+//
+//  1. Parses the room code from the URL.
+//
+//  2. Retrieves the Room object from Redis (key: "room:{roomCode}").
+//
+//  3. Checks the CurrentQIdx field of the room to determine which question is next.
+//
+//  4. Retrieves the full list of questions from Redis (key: "questions:{roomCode}").
+//
+//  5. If there are no more questions (i.e. CurrentQIdx >= len(questions)),
+//     responds with HTTP 204 No Content to indicate the end of the quiz.
+//
+//  6. Otherwise:
+//     - Increments the CurrentQIdx by 1,
+//     - Updates the Room in Redis,
+//     - Returns the next question and its index.
+//
+//     Example response:
+//
+//     {
+//     "question": { ... },
+//     "index": 2,
+//     "total": 10,
+//     }
+//
+// In case of errors (e.g. invalid room code, Redis error, parse failure),
+// responds with the appropriate HTTP error status.
+func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+
+	roomCode := parts[2]
+
+	var room room.Room
+	data, err := store.Client.Get(store.Ctx, "room:"+roomCode).Result()
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+	err = json.Unmarshal([]byte(data), &room)
+	if err != nil {
+		http.Error(w, "Failed to parse room", http.StatusInternalServerError)
+		return
+	}
+
+	currentQuestionIdx := room.CurrentQIdx
+	room.CurrentQIdx++
+	updatedRoomData, _ := json.Marshal(room)
+	store.Client.Set(store.Ctx, "room:"+roomCode, updatedRoomData, 60*time.Minute)
+
+	var questions []Question
+	data, err = store.Client.Get(store.Ctx, "questions:"+roomCode).Result()
+	if err != nil {
+		http.Error(w, "Questions not found", http.StatusNotFound)
+		return
+	}
+
+	err = json.Unmarshal([]byte(data), &questions)
+	if err != nil {
+		http.Error(w, "Failed to parse questions", http.StatusInternalServerError)
+		return
+	}
+	if currentQuestionIdx >= len(questions) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	currentQuestion := questions[currentQuestionIdx]
+	json.NewEncoder(w).Encode(map[string]any{
+		"question": currentQuestion,
+		"index":    currentQuestionIdx,
+		"total":    len(questions),
+	})
+
+}

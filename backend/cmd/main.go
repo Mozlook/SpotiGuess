@@ -24,6 +24,8 @@ func roomRouterHandler(w http.ResponseWriter, r *http.Request) {
 		game.GetQuestionsHandler(w, r)
 	} else if len(parts) == 4 && parts[3] == "scoreboard" {
 		game.GetScoreboardHandler(w, r)
+	} else if len(parts) == 4 && parts[3] == "next-question" {
+		game.GetNextQuestionHandler(w, r)
 	} else {
 		http.Error(w, "Invalid room route", http.StatusNotFound)
 	}
