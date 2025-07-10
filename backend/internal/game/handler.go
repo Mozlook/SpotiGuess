@@ -139,7 +139,7 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to save questions", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"status":         "started",
 		"questionsCount": len(questions),
 	})
@@ -275,8 +275,87 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println("Failed to update score:", err)
 		}
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"correct": request.Selected == question.CorrectAnswer,
 		"score":   currentScore,
 	})
+}
+
+// GetScoreboardHandler handles HTTP GET requests to /room/{code}/scoreboard.
+//
+// It expects the room code to be embedded in the URL path, e.g.:
+//
+//	GET /room/ABC123/scoreboard
+//
+// The handler performs the following steps:
+//
+//  1. Parses the room code from the URL.
+//
+//  2. Retrieves the corresponding Room object from Redis (key: "room:{roomCode}").
+//
+//  3. Iterates through all players in the room.
+//
+//  4. For each player, attempts to retrieve their current score from Redis
+//     under the key "score:{roomCode}:{playerId}". If no score is found or parsing fails,
+//     the player is assumed to have a score of 0.
+//
+//  5. Builds a scoreboard as a map of player IDs to scores.
+//
+//  6. Responds with the full scoreboard as a JSON object:
+//
+//     Response:
+//     {
+//     "scoreboard": {
+//     "spotify-user-1": 2000,
+//     "spotify-user-2": 1000,
+//     "guest123": 0
+//     }
+//     }
+//
+// In case of an error (e.g. room not found or Redis failure),
+// responds with the appropriate HTTP error status.
+func GetScoreboardHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+
+	var room room.Room
+	roomCode := parts[2]
+	data, err := store.Client.Get(store.Ctx, "room:"+roomCode).Result()
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	err = json.Unmarshal([]byte(data), &room)
+	if err != nil {
+		http.Error(w, "Failed to parse room", http.StatusInternalServerError)
+		return
+	}
+
+	scoreboard := make(map[string]int)
+	for _, player := range room.Players {
+
+		scoreKey := fmt.Sprintf("score:%s:%s", room.Code, player)
+		scoreData, err := store.Client.Get(store.Ctx, scoreKey).Result()
+		if err != nil {
+			log.Printf("Failed to fetch or parse score for player %s: %v", player, err)
+
+		}
+
+		score := 0
+		if err == nil {
+
+			score, err = strconv.Atoi(scoreData)
+			if err != nil {
+
+				log.Println("Failed to update score:", err)
+			}
+		}
+
+		scoreboard[player] = score
+	}
+	json.NewEncoder(w).Encode(map[string]any{
+		"scoreboard": scoreboard,
+	})
+
 }
