@@ -116,7 +116,7 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userKey := "user:" + me.ID
-	tokenData, _ := json.Marshal(map[string]interface{}{
+	tokenData, _ := json.Marshal(map[string]any{
 		"access_token":  tokenRes.AccessToken,
 		"refresh_token": tokenRes.RefreshToken,
 		"expires_at":    time.Now().Add(time.Duration(tokenRes.ExpiresIn) * time.Second).Unix(),
@@ -133,4 +133,3 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		"spotify_id":   me.ID,
 	})
 }
-

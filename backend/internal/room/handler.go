@@ -1,6 +1,7 @@
 package room
 
 import (
+	"backend/internal/model"
 	"backend/internal/spotify"
 	"backend/internal/store"
 	"encoding/json"
@@ -10,25 +11,6 @@ import (
 	"strings"
 	"time"
 )
-
-type Room struct {
-	Code        string
-	HostId      string
-	CreatedAt   time.Time
-	Players     []string
-	GameState   string
-	CurrentQIdx int
-	Scoreboard  map[string]int
-}
-
-type CreateRoomRequest struct {
-	HostID string `json:"hostId"`
-}
-
-type JoinRoomRequest struct {
-	RoomCode string `json:"roomCode"`
-	PlayerID string `json:"playerId"`
-}
 
 func generateRoomCode() string {
 	code := ""
@@ -69,8 +51,8 @@ func generateRoomCode() string {
 //
 // In case of an error (e.g. Redis failure), responds with HTTP 500.
 func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
-	var request CreateRoomRequest
-	room := new(Room)
+	var request model.CreateRoomRequest
+	room := new(model.Room)
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -127,7 +109,7 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 //
 // In case of an error (e.g. room not found, JSON parsing error), responds with an appropriate HTTP status code.
 func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
-	var request JoinRoomRequest
+	var request model.JoinRoomRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -140,7 +122,7 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var room Room
+	var room model.Room
 
 	err = json.Unmarshal([]byte(data), &room)
 	if err != nil {
@@ -221,7 +203,7 @@ func GetRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var room Room
+	var room model.Room
 	err = json.Unmarshal([]byte(data), &room)
 	if err != nil {
 		http.Error(w, "failed to parse room data", http.StatusInternalServerError)

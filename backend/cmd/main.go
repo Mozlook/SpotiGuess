@@ -6,6 +6,7 @@ import (
 	"backend/internal/middleware"
 	"backend/internal/room"
 	"backend/internal/store"
+	"backend/internal/ws"
 	"log"
 	"net/http"
 	"strings"
@@ -37,6 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	go ws.GlobalHub.Run()
 
 	store.InitRedis()
 
@@ -47,6 +49,7 @@ func main() {
 	r.HandleFunc("/auth/callback", auth.AuthCallbackHandler)
 	r.HandleFunc("/start-game", game.StartGameHandler)
 	r.HandleFunc("/submit-answer", game.SubmitAnswerHandler)
+	r.HandleFunc("/ws", ws.WSHandler)
 	handler := middleware.EnableCORS(r)
 	log.Println("Server on :8080")
 	http.ListenAndServe(":8080", handler)

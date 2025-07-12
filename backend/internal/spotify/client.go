@@ -1,16 +1,11 @@
 package spotify
 
 import (
+	"backend/internal/model"
 	"encoding/json"
 	"fmt"
 	"net/http"
 )
-
-type Track struct {
-	ID      string
-	Name    string
-	Artists []string
-}
 
 type recentlyPlayedResponse struct {
 	Items []struct {
@@ -56,7 +51,7 @@ type recommendationResponse struct {
 // Returns:
 //   - []Track: a slice of tracks the user recently listened to
 //   - error: if any step fails
-func FetchRecentTracks(token string) ([]Track, error) {
+func FetchRecentTracks(token string) ([]model.Track, error) {
 	url := "https://api.spotify.com/v1/me/player/recently-played?limit=25"
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -73,7 +68,7 @@ func FetchRecentTracks(token string) ([]Track, error) {
 	if err != nil {
 		return nil, err
 	}
-	var tracks []Track
+	var tracks []model.Track
 	for _, item := range apiResp.Items {
 		trackData := item.Track
 		var artistNames []string
@@ -81,7 +76,7 @@ func FetchRecentTracks(token string) ([]Track, error) {
 			artistNames = append(artistNames, artist.Name)
 
 		}
-		tracks = append(tracks, Track{
+		tracks = append(tracks, model.Track{
 			ID:      trackData.ID,
 			Name:    trackData.Name,
 			Artists: artistNames,

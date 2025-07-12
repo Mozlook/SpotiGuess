@@ -1,9 +1,9 @@
 package game
 
 import (
-	"backend/internal/room"
-	"backend/internal/spotify"
+	"backend/internal/model"
 	"backend/internal/store"
+	"backend/internal/ws"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,18 +13,6 @@ import (
 	"strings"
 	"time"
 )
-
-type StartGameRequest struct {
-	RoomCode string `json:"roomCode"`
-	HostId   string `json:"hostId"`
-}
-
-type AnswerRequest struct {
-	RoomCode   string `json:"roomCode"`
-	QuestionId string `json:"questionId"`
-	Selected   string `json:"selected"`
-	PlayerId   string `json:"playerId"`
-}
 
 // StartGameHandler handles HTTP POST requests to /start-game.
 //
@@ -64,7 +52,7 @@ type AnswerRequest struct {
 // In case of any failure (invalid input, Redis error, token retrieval failure, question generation failure),
 // an appropriate HTTP error is returned.
 func StartGameHandler(w http.ResponseWriter, r *http.Request) {
-	var request StartGameRequest
+	var request model.StartGameRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -76,7 +64,7 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var room room.Room
+	var room model.Room
 	err = json.Unmarshal([]byte(data), &room)
 	if err != nil {
 		http.Error(w, "Invalid room object", http.StatusInternalServerError)
@@ -86,7 +74,7 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid HostId", http.StatusForbidden)
 		return
 	}
-	var allTracks []spotify.Track
+	var allTracks []model.Track
 	for _, playerID := range room.Players {
 		key := fmt.Sprintf("tracks:%s:%s", request.RoomCode, playerID)
 		raw, err := store.Client.Get(store.Ctx, key).Result()
@@ -95,7 +83,7 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		var tracks []spotify.Track
+		var tracks []model.Track
 		err = json.Unmarshal([]byte(raw), &tracks)
 		if err != nil {
 			log.Println("invalid track data for player:", playerID, err)
@@ -108,7 +96,7 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 	rand.Shuffle(len(allTracks), func(i, j int) {
 		allTracks[i], allTracks[j] = allTracks[j], allTracks[i]
 	})
-	var selectedTracks []spotify.Track
+	var selectedTracks []model.Track
 	if len(allTracks) < 10 {
 		selectedTracks = allTracks
 	} else {
@@ -180,7 +168,7 @@ func GetQuestionsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get questions", http.StatusInternalServerError)
 		return
 	}
-	var questions []Question
+	var questions []model.Question
 	err = json.Unmarshal([]byte(raw), &questions)
 	if err != nil {
 		http.Error(w, "Failed to parse questions", http.StatusInternalServerError)
@@ -223,7 +211,7 @@ func GetQuestionsHandler(w http.ResponseWriter, r *http.Request) {
 //
 // In case of an error (e.g. invalid request, question not found, Redis error), responds with the appropriate HTTP status code.
 func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
-	var request AnswerRequest
+	var request model.AnswerRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -237,16 +225,16 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var questions []Question
+	var questions []model.Question
 	err = json.Unmarshal([]byte(data), &questions)
 	if err != nil {
 		http.Error(w, "Invalid questions data", http.StatusInternalServerError)
 		return
 	}
-	var question Question
+	var question model.Question
 	found := false
 	for _, q := range questions {
-		if q.ID == request.QuestionId {
+		if q.ID == request.QuestionID {
 			question = q
 			found = true
 			break
@@ -256,7 +244,7 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Question not found", http.StatusNotFound)
 		return
 	}
-	scoreKey := fmt.Sprintf("score:%s:%s", request.RoomCode, request.PlayerId)
+	scoreKey := fmt.Sprintf("score:%s:%s", request.RoomCode, request.PlayerID)
 	currentScore := 0
 
 	rawScore, err := store.Client.Get(store.Ctx, scoreKey).Result()
@@ -318,7 +306,7 @@ func GetScoreboardHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(path, "/")
 
-	var room room.Room
+	var room model.Room
 	roomCode := parts[2]
 	data, err := store.Client.Get(store.Ctx, "room:"+roomCode).Result()
 	if err != nil {
@@ -400,7 +388,7 @@ func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
 
 	roomCode := parts[2]
 
-	var room room.Room
+	var room model.Room
 	data, err := store.Client.Get(store.Ctx, "room:"+roomCode).Result()
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
@@ -417,7 +405,7 @@ func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	updatedRoomData, _ := json.Marshal(room)
 	store.Client.Set(store.Ctx, "room:"+roomCode, updatedRoomData, 60*time.Minute)
 
-	var questions []Question
+	var questions []model.Question
 	data, err = store.Client.Get(store.Ctx, "questions:"+roomCode).Result()
 	if err != nil {
 		http.Error(w, "Questions not found", http.StatusNotFound)
@@ -435,6 +423,17 @@ func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentQuestion := questions[currentQuestionIdx]
+	message := map[string]any{
+		"type": "question",
+		"data": currentQuestion,
+	}
+	payload, _ := json.Marshal(message)
+
+	ws.GlobalHub.Broadcast <- ws.BroadcastMessage{
+		RoomCode: roomCode,
+		Data:     payload,
+	}
+
 	json.NewEncoder(w).Encode(map[string]any{
 		"question": currentQuestion,
 		"index":    currentQuestionIdx,

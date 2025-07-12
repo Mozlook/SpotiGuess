@@ -1,18 +1,11 @@
 package game
 
 import (
+	"backend/internal/model"
 	"backend/internal/spotify"
 	"fmt"
 	"math/rand/v2"
 )
-
-type Question struct {
-	ID            string   `json:"id"`
-	TrackID       string   `json:"trackId"`
-	TrackName     string   `json:"trackName"`
-	AnswerOptions []string `json:"options"`
-	CorrectAnswer string   `json:"correct"`
-}
 
 // GenerateQuestions builds a list of quiz questions based on Spotify track data.
 //
@@ -36,10 +29,10 @@ type Question struct {
 // Returns:
 // - A slice of Question structs
 // - Or an error if fetching recommendations fails for any track
-func GenerateQuestions(tracks []spotify.Track, token string) ([]Question, error) {
-	var questions []Question
+func GenerateQuestions(tracks []spotify.Track, token string) ([]model.Question, error) {
+	var questions []model.Question
 	for i, track := range tracks {
-		var question Question
+		var question model.Question
 		recommendations, err := spotify.FetchRecommendations(track.ID, token)
 		if err != nil {
 			return nil, err
