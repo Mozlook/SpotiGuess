@@ -418,8 +418,45 @@ func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if currentQuestionIdx >= len(questions) {
-		w.WriteHeader(http.StatusNoContent)
+		scoreboard := make(map[string]int)
+		for _, player := range room.Players {
+			data, err := store.Client.Get(store.Ctx, "score:"+roomCode+":"+player).Result()
+			if err != nil {
+				log.Printf("Failed to fetch or parse score for player %s: %v", player, err)
+			}
+
+			score := 0
+			if err == nil {
+
+				score, err = strconv.Atoi(data)
+				if err != nil {
+
+					log.Println("Failed to update score:", err)
+				}
+			}
+
+			scoreboard[player] = score
+		}
+
+		message := map[string]any{
+			"type": "game-over",
+			"data": scoreboard,
+		}
+		payload, _ := json.Marshal(message)
+		ws.GlobalHub.Broadcast <- ws.BroadcastMessage{
+			RoomCode: roomCode,
+			Data:     payload,
+		}
+
+		store.Client.Del(store.Ctx, "room:"+roomCode)
+		store.Client.Del(store.Ctx, "questions:"+roomCode)
+		for _, player := range room.Players {
+			store.Client.Del(store.Ctx, "score:"+roomCode+":"+player)
+			store.Client.Del(store.Ctx, "tracks:"+roomCode+":"+player)
+
+		}
 		return
+
 	}
 
 	currentQuestion := questions[currentQuestionIdx]
