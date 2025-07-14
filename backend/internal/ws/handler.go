@@ -23,6 +23,7 @@ func WSHandler(w http.ResponseWriter, r *http.Request) {
 
 	roomCode := parts[2]
 	playerID := parts[3]
+	log.Printf("Incoming WS: /ws/%s/%s\n", roomCode, playerID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

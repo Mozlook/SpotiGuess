@@ -29,7 +29,7 @@ import (
 // Returns:
 // - A slice of Question structs
 // - Or an error if fetching recommendations fails for any track
-func GenerateQuestions(tracks []spotify.Track, token string) ([]model.Question, error) {
+func GenerateQuestions(tracks []model.Track, token string) ([]model.Question, error) {
 	var questions []model.Question
 	for i, track := range tracks {
 		var question model.Question

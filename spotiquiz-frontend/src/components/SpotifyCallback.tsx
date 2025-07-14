@@ -14,6 +14,7 @@ export default function SpotifyCallback() {
                 .then((res) => res.json())
                 .then((data) => {
                     localStorage.setItem("access_token", data.access_token);
+                    localStorage.setItem("spotify_id", data.spotify_id);
                     window.location.href = "/";
                 });
         }

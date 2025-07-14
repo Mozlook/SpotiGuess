@@ -7,7 +7,7 @@ const loginUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&r
 export default function LoginPage() {
     return (
         <div>
-            <h1>🎵 SpotiQuiz</h1>
+            <h1> 🎵 SpotiQuiz</h1>
             <a href={loginUrl}>
                 <button>Zaloguj się przez Spotify</button>
             </a>
