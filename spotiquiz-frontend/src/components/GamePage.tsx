@@ -48,7 +48,7 @@ const GamePage = () => {
                 socketRef.current.close();
             }
         };
-    }, [code, playerID]);
+    }, [code, playerID, navigate]);
 
     function getPlayerId(): string {
         return (
@@ -68,7 +68,7 @@ const GamePage = () => {
         const playerId =
             localStorage.getItem("spotify_id") || localStorage.getItem("guest_id");
         const payload = {
-            type: "answer",
+            type: "question",
             data: {
                 questionId: question.id,
                 selected: selected,

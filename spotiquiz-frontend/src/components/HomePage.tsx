@@ -7,31 +7,38 @@ const HomePage = () => {
     const url = import.meta.env.VITE_BACKEND_URL;
     const [roomCode, setRoomCode] = useState("");
     const navigate = useNavigate();
-
+    localStorage.removeItem("isHost");
     const CreateRoom = async () => {
         const res = await axios.post(`${url}/create-room`, {
             hostId: player_ID,
         });
         localStorage.setItem("isHost", "true");
-        navigate(`/room/${res.data.roomCode}/lobby`);
+        navigate(`/room/${res.data.RoomCode}/lobby`);
     };
 
     const JoinRoom = async () => {
         const token = localStorage.getItem("access_token");
-        const res = await axios.post(
-            `${url}/join-room`,
-            {
-                roomCode: roomCode,
-                playerId: player_ID,
-            },
-            {
-                headers: {
-                    ...(token && { Authorization: `Bearer ${token}` }),
+        try {
+            const res = await axios.post(
+                `${url}/join-room`,
+                {
+                    roomCode: roomCode,
+                    playerId: player_ID,
                 },
-            },
-        );
-        localStorage.setItem("isHost", "false");
-        navigate(`/room/${res.data.roomCode}/lobby`);
+                {
+                    headers: {
+                        ...(token && { Authorization: `Bearer ${token}` }),
+                    },
+                },
+            );
+            localStorage.setItem("isHost", "false");
+            navigate(`/room/${res.data.roomCode}/lobby`);
+        } catch (err) {
+            console.error(err);
+            alert("Couldn't join room");
+            localStorage.removeItem("roomCode");
+            localStorage.removeItem("isHost");
+        }
     };
 
     return (
