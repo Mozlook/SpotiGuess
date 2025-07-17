@@ -103,14 +103,17 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		selectedTracks = allTracks[:10]
 	}
 
-	key := "user:" + request.HostId
+	key := "player:" + request.HostId
 	raw, err := store.Client.Get(store.Ctx, key).Result()
+	if err != nil {
+		log.Println("Failed to get token")
+	}
 	var tokenData struct {
 		AccessToken string `json:"access_token"`
 	}
 	err = json.Unmarshal([]byte(raw), &tokenData)
 	if err != nil {
-		http.Error(w, "Failed to parse token", http.StatusInternalServerError)
+		http.Error(w, "Failed to parse token ", http.StatusInternalServerError)
 		return
 	}
 	token := tokenData.AccessToken
@@ -126,6 +129,17 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to save questions", http.StatusInternalServerError)
 		return
+	}
+
+	go RunQuizLoop(request.RoomCode)
+	message := map[string]any{
+		"type": "game-started",
+	}
+
+	payload, _ := json.Marshal(message)
+	ws.GlobalHub.Broadcast <- ws.BroadcastMessage{
+		RoomCode: request.RoomCode,
+		Data:     payload,
 	}
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":         "started",

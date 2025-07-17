@@ -4,6 +4,8 @@ import (
 	"backend/internal/model"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 )
 
@@ -112,7 +114,13 @@ func FetchRecommendations(trackID string, token string) ([]string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("Spotify FetchRecommendations error:", err)
 		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Spotify API returned %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("spotify error %d", resp.StatusCode)
 	}
 
 	var apiResp recommendationResponse

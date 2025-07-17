@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
-type Question = {
+import HostGame from "./HostGame.tsx";
+import PlayerGame from "./PlayerGame.tsx";
+export type Question = {
     id: string;
     trackId: string;
     trackName: string;
@@ -10,11 +11,16 @@ type Question = {
 };
 const GamePage = () => {
     const navigate = useNavigate();
-    const { code } = useParams();
-    const playerID = getPlayerId();
+    const isHost = localStorage.getItem("isHost") === "true";
+    const { code } = useParams<string>();
+    const playerID: string = getPlayerId();
     const [question, setQuestion] = useState<Question | null>(null);
+    const [scoreboard, setScoreboard] = useState<Record<string, number> | null>(
+        null,
+    );
+    const [view, setView] = useState<string>("");
     const socketRef = useRef<WebSocket | null>(null);
-    const [hasAnswered, setHasAnswered] = useState(false);
+    const [hasAnswered, setHasAnswered] = useState<boolean>(false);
     useEffect(() => {
         if (!code || !playerID) return;
 
@@ -32,10 +38,15 @@ const GamePage = () => {
 
             if (msg.type === "question" && msg.data) {
                 setQuestion(msg.data);
+                setView("question");
                 setHasAnswered(false);
             }
-            if (msg.type === "game-over" && msg.data) {
+            if (msg.type === "game-over") {
                 navigate("/scoreboard", { state: msg.data });
+            }
+            if (msg.type === "scoreboard" && msg.data) {
+                setScoreboard(msg.data);
+                setView("scoreboard");
             }
         };
 
@@ -48,7 +59,7 @@ const GamePage = () => {
                 socketRef.current.close();
             }
         };
-    }, [code, playerID, navigate]);
+    }, [code, playerID, navigate, scoreboard, question]);
 
     function getPlayerId(): string {
         return (
@@ -84,25 +95,21 @@ const GamePage = () => {
     return (
         <div>
             <h1>SpotiGuess - Gra</h1>
-            {question && (
-                <div>
-                    <h2>{question.trackName}</h2>
-                    {hasAnswered && <p>Czekam na kolejne pytanie...</p>}
-                    <ul>
-                        {question.options.map((opt) => (
-                            <li key={opt}>
-                                <button
-                                    onClick={() => handleAnswer(opt)}
-                                    disabled={hasAnswered}
-                                >
-                                    {opt}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+            {isHost ? (
+                <HostGame
+                    question={question}
+                    scoreboard={scoreboard}
+                    view={view}
+                    playerID={playerID}
+                />
+            ) : (
+                <PlayerGame
+                    question={question}
+                    scoreboard={scoreboard}
+                    view={view}
+                    playerID={playerID}
+                />
             )}
-            {!question && <p>Czekam na rozpoczęcie gry...</p>}
         </div>
     );
 };

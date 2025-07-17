@@ -3,9 +3,9 @@ import { useEffect, useRef } from "react";
 import axios from "axios";
 const RoomLobby = () => {
     const { code } = useParams();
-    const isHost = localStorage.getItem("isHost");
-    const playerID = localStorage.getItem("spotify_id");
-    const url = import.meta.env.VITE_BACKEND_URL;
+    const isHost: boolean = localStorage.getItem("isHost") === "true";
+    const playerID: string | null = localStorage.getItem("spotify_id");
+    const url: string = import.meta.env.VITE_BACKEND_URL;
     const navigate = useNavigate();
     const socketRef = useRef<WebSocket | null>(null);
     const StartGame = async () => {
@@ -23,7 +23,7 @@ const RoomLobby = () => {
     };
 
     useEffect(() => {
-        if (isHost !== "true") {
+        if (isHost !== true) {
             socketRef.current = new WebSocket(
                 `ws://localhost:8080/ws/${code}/${playerID}`,
             );
@@ -55,7 +55,7 @@ const RoomLobby = () => {
     return (
         <>
             <span>Room code: {code}</span>
-            {isHost === "true" ? (
+            {isHost === true ? (
                 <div>
                     <div>You are a host</div>
                     <button onClick={StartGame}>Start Game</button>

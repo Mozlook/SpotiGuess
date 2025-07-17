@@ -4,6 +4,7 @@ import (
 	"backend/internal/model"
 	"backend/internal/spotify"
 	"fmt"
+	"log"
 	"math/rand/v2"
 )
 
@@ -33,8 +34,18 @@ func GenerateQuestions(tracks []model.Track, token string) ([]model.Question, er
 	var questions []model.Question
 	for i, track := range tracks {
 		var question model.Question
+		if token == "" {
+			log.Println("Token is empty before fetching recommendations")
+			return nil, fmt.Errorf("missing token")
+		}
+		if track.ID == "" {
+			log.Printf("Skipping empty track ID for %s", track.Name)
+			continue
+		}
+
 		recommendations, err := spotify.FetchRecommendations(track.ID, token)
 		if err != nil {
+			log.Printf("Failed to fetch recommendations for track %s: %v", track.ID, err)
 			return nil, err
 		}
 		question.ID = fmt.Sprintf("q%d", i+1)

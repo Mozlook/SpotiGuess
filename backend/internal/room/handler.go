@@ -59,24 +59,40 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Code := generateRoomCode()
-
-	room.Code = Code
 	room.HostId = request.HostID
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Spotify token required", http.StatusUnauthorized)
+		return
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	token = strings.TrimSpace(token)
+
+	userKey := "player:" + room.HostId
+	tokenData, _ := json.Marshal(map[string]string{
+		"access_token": token,
+	})
+	err = store.Client.Set(store.Ctx, userKey, tokenData, 60*time.Minute).Err()
+	if err != nil {
+		log.Println("Failed to save token during room creation:", err)
+	}
+
+	room.Code = generateRoomCode()
 	room.CreatedAt = time.Now()
 	room.GameState = "waiting"
 
 	data, _ := json.Marshal(room)
-	roomKey := "room:" + Code
+	roomKey := "room:" + room.Code
 	err = store.Client.Set(store.Ctx, roomKey, data, 60*time.Minute).Err()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	err = json.NewEncoder(w).Encode(map[string]string{
-		"RoomCode": Code,
+		"RoomCode": room.Code,
 	})
-
 }
 
 // JoinRoomHandler handles HTTP POST requests to /join-room.
@@ -118,7 +134,7 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	roomKey := "room:" + request.RoomCode
 	data, err := store.Client.Get(store.Ctx, roomKey).Result()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
 
@@ -132,7 +148,7 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	room.Players = append(room.Players, request.PlayerID)
 
 	jsonData, _ := json.Marshal(room)
-	err = store.Client.Set(store.Ctx, request.RoomCode, string(jsonData), 60*time.Minute).Err()
+	err = store.Client.Set(store.Ctx, roomKey, string(jsonData), 60*time.Minute).Err()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -152,6 +168,15 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			log.Println("error saving tracks:", err)
+		}
+		userKey := "player:" + request.PlayerID
+		tokenData, _ := json.Marshal(map[string]string{
+			"access_token": token,
+		})
+
+		err = store.Client.Set(store.Ctx, userKey, tokenData, 60*time.Minute).Err()
+		if err != nil {
+			log.Println("error saving user token", err)
 		}
 	}
 

@@ -3,17 +3,33 @@ import { useState } from "react";
 import LoginPage from "./LoginPage";
 import axios from "axios";
 const HomePage = () => {
-    const player_ID = localStorage.getItem("spotify_id");
-    const url = import.meta.env.VITE_BACKEND_URL;
-    const [roomCode, setRoomCode] = useState("");
+    const player_ID: string | null = localStorage.getItem("spotify_id");
+    const url: string = import.meta.env.VITE_BACKEND_URL;
+    const [roomCode, setRoomCode] = useState<string>("");
     const navigate = useNavigate();
     localStorage.removeItem("isHost");
     const CreateRoom = async () => {
-        const res = await axios.post(`${url}/create-room`, {
-            hostId: player_ID,
-        });
-        localStorage.setItem("isHost", "true");
-        navigate(`/room/${res.data.RoomCode}/lobby`);
+        try {
+            const token = localStorage.getItem("access_token");
+
+            const res = await axios.post(
+                `${url}/create-room`,
+                {
+                    hostId: player_ID,
+                },
+                {
+                    headers: {
+                        ...(token && { Authorization: `Bearer ${token}` }),
+                    },
+                },
+            );
+            localStorage.setItem("isHost", "true");
+            navigate(`/room/${res.data.RoomCode}/lobby`);
+        } catch (err) {
+            console.error(err);
+            alert("Couldn't create room");
+            localStorage.removeItem("isHost");
+        }
     };
 
     const JoinRoom = async () => {
