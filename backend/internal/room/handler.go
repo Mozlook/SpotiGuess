@@ -30,26 +30,33 @@ func generateRoomCode() string {
 //	  "hostId": "spotify-user-id"
 //	}
 //
+// The request **must** include an Authorization header with a Spotify access token:
+//
+//	Authorization: Bearer <access_token>
+//
 // The handler performs the following steps:
 //
-//  1. Decodes the JSON request body into a CreateRoomRequest struct.
+//  1. Validates and decodes the JSON request body into a CreateRoomRequest struct.
 //
-//  2. Generates a random 6-character room code.
+//  2. Extracts the Spotify access token from the Authorization header.
+//     - If the header is missing or invalid, responds with HTTP 401 Unauthorized.
 //
-//  3. Constructs a new Room object with initial state ("waiting").
+//  3. Stores the access token in Redis under the key "player:{hostId}".
 //
-//  4. Serializes the Room object to JSON.
+//  4. Generates a 6-character room code.
 //
-//  5. Stores it in Redis with a TTL of 60 minutes.
+//  5. Constructs a new Room object with the given hostId and state set to "waiting".
 //
-//  6. Responds with a JSON object containing the generated room code:
+//  6. Stores the Room in Redis under the key "room:{roomCode}" with a 60-minute TTL.
+//
+//  7. Responds with a JSON object containing the generated room code:
 //
 //     Response:
 //     {
-//     "roomCode": "ABC123"
+//     "RoomCode": "ABC123"
 //     }
 //
-// In case of an error (e.g. Redis failure), responds with HTTP 500.
+// On JSON parsing failure or Redis write failure, responds with an appropriate HTTP 400/500 status.
 func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	var request model.CreateRoomRequest
 	room := new(model.Room)
