@@ -162,12 +162,19 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+		log.Printf("Fetched %d tracks for player %s", len(tracks), request.PlayerID)
+		for _, t := range tracks {
+			log.Printf("- %s (%s)", t.Name, t.ID)
+		}
+
 		jsonData, _ := json.Marshal(tracks)
 
 		err = store.Client.Set(store.Ctx, "tracks:"+request.RoomCode+":"+request.PlayerID, jsonData, 60*time.Minute).Err()
 
 		if err != nil {
 			log.Println("error saving tracks:", err)
+		} else {
+			log.Println("saved tracks:", len(tracks))
 		}
 		userKey := "player:" + request.PlayerID
 		tokenData, _ := json.Marshal(map[string]string{

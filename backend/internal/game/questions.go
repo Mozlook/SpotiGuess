@@ -1,8 +1,8 @@
 package game
 
 import (
+	"backend/internal/lastfm"
 	"backend/internal/model"
-	"backend/internal/spotify"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -30,20 +30,17 @@ import (
 // Returns:
 // - A slice of Question structs
 // - Or an error if fetching recommendations fails for any track
-func GenerateQuestions(tracks []model.Track, token string) ([]model.Question, error) {
+func GenerateQuestions(tracks []model.Track) ([]model.Question, error) {
 	var questions []model.Question
 	for i, track := range tracks {
 		var question model.Question
-		if token == "" {
-			log.Println("Token is empty before fetching recommendations")
-			return nil, fmt.Errorf("missing token")
-		}
+
 		if track.ID == "" {
 			log.Printf("Skipping empty track ID for %s", track.Name)
 			continue
 		}
 
-		recommendations, err := spotify.FetchRecommendations(track.ID, token)
+		recommendations, err := lastfm.FetchSimilar(track)
 		if err != nil {
 			log.Printf("Failed to fetch recommendations for track %s: %v", track.ID, err)
 			return nil, err

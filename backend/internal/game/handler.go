@@ -116,9 +116,8 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to parse token ", http.StatusInternalServerError)
 		return
 	}
-	token := tokenData.AccessToken
 
-	questions, err := GenerateQuestions(selectedTracks, token)
+	questions, err := GenerateQuestions(selectedTracks)
 	if err != nil {
 		http.Error(w, "Failed to generate questions", http.StatusInternalServerError)
 		return

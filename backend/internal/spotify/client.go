@@ -62,11 +62,14 @@ func FetchRecentTracks(token string) ([]model.Track, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Spotify FetchRecentTracks status:", resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("Spotify response body:", string(body))
 
 	var apiResp recentlyPlayedResponse
 
 	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&apiResp)
+	err = json.Unmarshal(body, &apiResp)
 	if err != nil {
 		return nil, err
 	}
