@@ -113,15 +113,22 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 //
 // The handler performs the following steps:
 //
-//  1. Decodes the JSON request body into a JoinRoomRequest struct.
+//  1. Decodes the request body into a JoinRoomRequest struct.
 //
-//  2. Retrieves the Room object from Redis using the provided room code.
+//  2. Retrieves the Room object from Redis under "room:{roomCode}".
+//     - If not found, responds with HTTP 404.
 //
-//  3. Adds the player ID to the room's Players list.
+//  3. Appends the joining playerId to the room's Players slice.
 //
-//  4. Updates the room object in Redis with a new 60-minute TTL.
+//  4. Updates the room in Redis with a 60-minute TTL.
 //
-//  5. Responds with a JSON object confirming the join:
+//  5. If the request contains a valid Authorization header:
+//     - Extracts the Spotify access token.
+//     - Fetches the player's 25 most recently played tracks via Spotify API.
+//     - Stores the tracks in Redis under "tracks:{roomCode}:{playerId}".
+//     - Also stores the access token in Redis under "player:{playerId}".
+//
+//  6. Responds with a JSON object confirming the join:
 //
 //     Response:
 //     {
@@ -130,7 +137,11 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 //     "playerId": "spotify-user-456"
 //     }
 //
-// In case of an error (e.g. room not found, JSON parsing error), responds with an appropriate HTTP status code.
+// Notes:
+// - The Authorization header is optional, but required to store player track data.
+// - If the Spotify token is expired or invalid, track saving will silently fail.
+//
+// On JSON parsing failure or Redis error, responds with appropriate HTTP 400/500.
 func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	var request model.JoinRoomRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
