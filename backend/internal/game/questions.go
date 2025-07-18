@@ -8,28 +8,40 @@ import (
 	"math/rand/v2"
 )
 
-// GenerateQuestions builds a list of quiz questions based on Spotify track data.
+// GenerateQuestions generates a slice of quiz questions from the given track list.
 //
-// It accepts a list of tracks (each with ID and name) and a Spotify access token
-// used to fetch recommendations for each track.
+// Each question includes a correct answer (the original track) and 3 fake answers
+// fetched using the Last.fm API via the FetchSimilar function.
 //
-// For each input track, the function:
+// It performs the following steps:
 //
-//  1. Calls FetchRecommendations to get 3 similar track names (used as incorrect answers).
-//  2. Appends the correct track name to the answer options.
-//  3. Shuffles the resulting list of 4 answers.
-//  4. Creates a Question struct with:
-//     - A unique ID ("q1", "q2", ...),
-//     - Track ID (used later for playback),
-//     - Track name (used for result display),
-//     - A shuffled list of answer options,
-//     - The correct answer as a string.
-//
-// The resulting list of questions can be used to power a full quiz round.
+//  1. Iterates over the provided slice of model.Track.
+//  2. For each track:
+//     - Skips it if the track has an empty ID (to avoid invalid entries).
+//     - Calls lastfm.FetchSimilar to obtain up to 3 similar track names.
+//     - Constructs a model.Question:
+//     • ID: "q1", "q2", ...
+//     • TrackID: original track's ID
+//     • TrackName: original track name
+//     • AnswerOptions: 3 fake answers + correct answer, in random order
+//     • CorrectAnswer: original track name
+//  3. Appends the generated question to the result slice.
 //
 // Returns:
-// - A slice of Question structs
-// - Or an error if fetching recommendations fails for any track
+//   - []model.Question on success
+//   - error if any call to FetchSimilar fails
+//
+// Logging is used to report skipped tracks or failures to fetch recommendations.
+//
+// Example question structure:
+//
+//	{
+//	  "id": "q1",
+//	  "trackId": "abc123",
+//	  "trackName": "Blinding Lights",
+//	  "answerOptions": ["Starboy", "Can't Feel My Face", "Save Your Tears", "Blinding Lights"],
+//	  "correctAnswer": "Blinding Lights"
+//	}
 func GenerateQuestions(tracks []model.Track) ([]model.Question, error) {
 	var questions []model.Question
 	for i, track := range tracks {
