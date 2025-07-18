@@ -20,37 +20,33 @@ import (
 //
 //	{
 //	  "roomCode": "ABC123",
-//	  "hostId": "spotify-user-id"
+//	  "hostId": "spotify-user-456"
 //	}
 //
 // The handler performs the following steps:
 //
-//  1. Validates the request and ensures that the provided host ID matches the host of the room.
+//  1. Decodes the JSON request body into a StartGameRequest struct.
+//  2. Retrieves the Room object from Redis using key "room:{roomCode}".
+//  3. Verifies that the requesting user (hostId) matches the room's HostId.
+//  4. Iterates over all players in the room and attempts to fetch their saved tracks
+//     from Redis under the key "tracks:{roomCode}:{playerId}".
+//     - Invalid or missing track data is logged and skipped.
+//  5. Combines all retrieved tracks, shuffles them, and selects the first 10 (or fewer).
+//  6. Calls GenerateQuestions with the selected tracks to create quiz questions.
+//  7. Stores the generated []Question in Redis under key "questions:{roomCode}" with a TTL of 60 minutes.
+//  8. Launches the quiz loop asynchronously via RunQuizLoop(roomCode).
+//  9. Broadcasts a "game-started" message via WebSocket to all clients in the room.
 //
-//  2. Retrieves the room from Redis using the given room code.
+// 10. Responds with a JSON object containing:
 //
-//  3. For each player in the room, attempts to fetch their previously stored track history
-//     from Redis under the key "tracks:{roomCode}:{playerId}". Invalid or missing data is skipped.
+//	Response:
+//	{
+//	  "status": "started",
+//	  "questionsCount": 10
+//	}
 //
-//  4. Combines all retrieved tracks, shuffles the list, and selects up to 10 unique tracks.
-//
-//  5. Retrieves the host's Spotify access token from Redis (under "user:{hostId}").
-//
-//  6. Calls GenerateQuestions with the selected tracks and token to generate quiz questions.
-//
-//  7. Stores the generated []Question into Redis under the key "questions:{roomCode}"
-//     with a 60-minute TTL.
-//
-//  8. Responds with a JSON object indicating the game has started:
-//
-//     Response:
-//     {
-//     "status": "started",
-//     "questionsCount": 10
-//     }
-//
-// In case of any failure (invalid input, Redis error, token retrieval failure, question generation failure),
-// an appropriate HTTP error is returned.
+// If the host is invalid, Redis access fails, or question generation fails,
+// the handler responds with an appropriate HTTP error (e.g. 400, 403, 500).
 func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 	var request model.StartGameRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -101,20 +97,6 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		selectedTracks = allTracks
 	} else {
 		selectedTracks = allTracks[:10]
-	}
-
-	key := "player:" + request.HostId
-	raw, err := store.Client.Get(store.Ctx, key).Result()
-	if err != nil {
-		log.Println("Failed to get token")
-	}
-	var tokenData struct {
-		AccessToken string `json:"access_token"`
-	}
-	err = json.Unmarshal([]byte(raw), &tokenData)
-	if err != nil {
-		http.Error(w, "Failed to parse token ", http.StatusInternalServerError)
-		return
 	}
 
 	questions, err := GenerateQuestions(selectedTracks)
