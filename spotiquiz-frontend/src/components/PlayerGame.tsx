@@ -12,8 +12,6 @@ const PlayerGame: React.FC<Props> = ({
     question,
     handleAnswer,
     hasAnswered,
-    scoreboard,
-    playerId,
 }) => {
     return (
         <div>
@@ -26,6 +24,7 @@ const PlayerGame: React.FC<Props> = ({
                         {question.options.map((option) => {
                             return (
                                 <button
+                                    key={option}
                                     className="border"
                                     disabled={hasAnswered}
                                     onClick={() => handleAnswer(option)}

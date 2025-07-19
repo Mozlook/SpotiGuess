@@ -56,10 +56,24 @@ const HomePage = () => {
             localStorage.removeItem("isHost");
         }
     };
+    const handleLogout = () => {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("spotify_id");
+        window.location.reload();
+    };
 
     return (
         <div className="flex flex-col justify-center items-center gap-8">
-            {player_ID ? <span>Logged in</span> : <LoginPage />}
+            {player_ID ? (
+                <div>
+                    <span>Logged in</span>
+                    <button className="border" onClick={handleLogout}>
+                        Logout
+                    </button>
+                </div>
+            ) : (
+                <LoginPage />
+            )}
             <button className="border" onClick={CreateRoom}>
                 Create room
             </button>

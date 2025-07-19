@@ -5,7 +5,7 @@ import (
 	"backend/internal/model"
 	"fmt"
 	"log"
-	"math/rand/v2"
+	"math/rand"
 )
 
 // GenerateQuestions generates a slice of quiz questions from the given track list.
@@ -57,12 +57,19 @@ func GenerateQuestions(tracks []model.Track) ([]model.Question, error) {
 			log.Printf("Failed to fetch recommendations for track %s: %v", track.ID, err)
 			return nil, err
 		}
+
+		trackDuration := track.Duration // w ms
+		maxStart := trackDuration - 15000
+		maxStart = max(maxStart, 0)
+		startMs := rand.Intn(maxStart)
+
 		question.ID = fmt.Sprintf("q%d", i+1)
 		question.TrackID = track.ID
 		question.TrackName = track.Name
 		question.AnswerOptions = recommendations
 		question.AnswerOptions = append(question.AnswerOptions, track.Name)
 		question.CorrectAnswer = track.Name
+		question.PositionMs = startMs
 		rand.Shuffle(len(question.AnswerOptions), func(i, j int) {
 			question.AnswerOptions[i], question.AnswerOptions[j] = question.AnswerOptions[j], question.AnswerOptions[i]
 		})

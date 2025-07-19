@@ -11,9 +11,10 @@ import (
 type recentlyPlayedResponse struct {
 	Items []struct {
 		Track struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Artists []struct {
+			ID         string `json:"id"`
+			Name       string `json:"name"`
+			DurationMs int    `json:"duration_ms"`
+			Artists    []struct {
 				Name string `json:"name"`
 			} `json:"artists"`
 		} `json:"track"`
@@ -81,9 +82,10 @@ func FetchRecentTracks(token string) ([]model.Track, error) {
 
 		}
 		tracks = append(tracks, model.Track{
-			ID:      trackData.ID,
-			Name:    trackData.Name,
-			Artists: artistNames,
+			ID:       trackData.ID,
+			Name:     trackData.Name,
+			Artists:  artistNames,
+			Duration: trackData.DurationMs,
 		})
 	}
 	return tracks, nil

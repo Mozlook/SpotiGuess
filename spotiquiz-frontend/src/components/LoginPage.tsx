@@ -4,6 +4,7 @@ const scopes = [
     "user-read-recently-played",
     "user-read-private",
     "user-read-email",
+    "streaming",
 ];
 
 function getSpotifyLoginUrl() {

@@ -9,13 +9,15 @@ type Question struct {
 	TrackName     string   `json:"trackName"`
 	AnswerOptions []string `json:"options"`
 	CorrectAnswer string   `json:"correct"`
+	PositionMs    int      `json:"positionMs"`
 }
 
 // Track represents a simplified track structure fetched from Spotify.
 type Track struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Artists []string `json:"artists"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Artists  []string `json:"artists"`
+	Duration int      `json:"duration"`
 }
 
 // Room holds the state of a quiz room.

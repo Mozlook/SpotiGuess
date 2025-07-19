@@ -8,10 +8,12 @@ export type Question = {
     trackName: string;
     options: string[];
     correct: string;
+    positionMs: number;
 };
 const GamePage = () => {
     const navigate = useNavigate();
     const isHost = localStorage.getItem("isHost") === "true";
+    const token = localStorage.getItem("access_token");
     const { code } = useParams<string>();
     const playerID: string = getPlayerId();
     const [question, setQuestion] = useState<Question | null>(null);
@@ -37,7 +39,9 @@ const GamePage = () => {
             console.log("WS widomosc:", msg);
 
             if (msg.type === "question" && msg.data) {
+                console.log(msg.data);
                 setQuestion(msg.data);
+                console.log(question);
                 setView("question");
                 setHasAnswered(false);
             }
@@ -79,7 +83,7 @@ const GamePage = () => {
         const playerId =
             localStorage.getItem("spotify_id") || localStorage.getItem("guest_id");
         const payload = {
-            type: "question",
+            type: "answer",
             data: {
                 questionId: question.id,
                 selected: selected,
@@ -101,7 +105,7 @@ const GamePage = () => {
                     scoreboard={scoreboard}
                     view={view}
                     playerID={playerID}
-                    hasAnswered={hasAnswered}
+                    accessToken={token}
                 />
             ) : (
                 <PlayerGame
@@ -109,6 +113,8 @@ const GamePage = () => {
                     scoreboard={scoreboard}
                     view={view}
                     playerID={playerID}
+                    hasAnswered={hasAnswered}
+                    handleAnswer={handleAnswer}
                 />
             )}
         </div>
