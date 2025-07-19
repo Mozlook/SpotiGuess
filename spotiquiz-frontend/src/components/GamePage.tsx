@@ -101,6 +101,7 @@ const GamePage = () => {
                     scoreboard={scoreboard}
                     view={view}
                     playerID={playerID}
+                    hasAnswered={hasAnswered}
                 />
             ) : (
                 <PlayerGame

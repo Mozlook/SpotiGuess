@@ -4,14 +4,40 @@ type Props = {
     scoreboard: Record<string, number> | null;
     view: string;
     playerId: string;
+    hasAnswered: boolean;
+    handleAnswer: (selected: string) => void;
 };
-const PlayerGame: React.FC<Props> = ({ view, question }) => {
+const PlayerGame: React.FC<Props> = ({
+    view,
+    question,
+    handleAnswer,
+    hasAnswered,
+    scoreboard,
+    playerId,
+}) => {
     return (
         <div>
             <div>player</div>
             <div>{view}</div>
-            {view === "question" && <div>{question?.trackName}</div>}
-            {view == "scoreboard" && <div>Waiting for next question</div>}
+            {view === "question" && question !== null && (
+                <div>
+                    <div>{question.trackName}</div>
+                    <div>
+                        {question.options.map((option) => {
+                            return (
+                                <button
+                                    className="border"
+                                    disabled={hasAnswered}
+                                    onClick={() => handleAnswer(option)}
+                                >
+                                    {option}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+            {view !== "question" && <div>Waiting for next question</div>}
         </div>
     );
 };
