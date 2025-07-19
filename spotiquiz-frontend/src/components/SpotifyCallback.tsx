@@ -1,32 +1,26 @@
 import { useEffect } from "react";
+import axios from "axios";
 
 export default function SpotifyCallback() {
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get("code");
+        const code = new URLSearchParams(window.location.search).get("code");
 
         if (code) {
-            fetch("http://localhost:8080/auth/callback", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code }),
-            })
-                .then(async (res) => {
-                    if (!res.ok) {
-                        const text = await res.text(); // odczytaj jako tekst (bo może to nie być JSON)
-                        throw new Error(`Auth failed: ${res.status} - ${text}`);
-                    }
-                    return res.json();
-                })
-                .then((data) => {
-                    localStorage.setItem("access_token", data.access_token);
-                    localStorage.setItem("spotify_id", data.spotify_id);
+            (async () => {
+                try {
+                    const res = await axios.post("http://localhost:8080/auth/callback", {
+                        code,
+                    });
+
+                    const { access_token, spotify_id } = res.data;
+                    localStorage.setItem("access_token", access_token);
+                    localStorage.setItem("spotify_id", spotify_id);
                     window.location.href = "/";
-                })
-                .catch((err) => {
+                } catch (err) {
                     console.error("Auth error:", err);
-                    alert("Logowanie nie powiodło się");
-                });
+                    alert("Login failed");
+                }
+            })();
         }
     }, []);
 
