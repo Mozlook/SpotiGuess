@@ -9,40 +9,52 @@ import (
 	"math/rand"
 )
 
-// GenerateQuestions generates a slice of quiz questions from the given track list.
+// GenerateQuestions generates quiz questions from a list of Spotify tracks.
 //
-// Each question includes a correct answer (the original track) and 3 fake answers
-// fetched using the Last.fm API via the FetchSimilar function.
+// It expects:
+//   - a slice of model.Track structs containing metadata about tracks,
+//   - an OAuth access token to use for Spotify fallback search.
 //
-// It performs the following steps:
+// The function performs the following steps for each track:
 //
-//  1. Iterates over the provided slice of model.Track.
-//  2. For each track:
-//     - Skips it if the track has an empty ID (to avoid invalid entries).
-//     - Calls lastfm.FetchSimilar to obtain up to 3 similar track names.
-//     - Constructs a model.Question:
-//     • ID: "q1", "q2", ...
-//     • TrackID: original track's ID
-//     • TrackName: original track name
-//     • AnswerOptions: 3 fake answers + correct answer, in random order
-//     • CorrectAnswer: original track name
-//  3. Appends the generated question to the result slice.
+// 1. Skips the track if it has an empty ID.
+//
+// 2. Attempts to fetch 3 similar track titles using the Last.fm API.
+//
+//  3. If Last.fm fails (either by error or empty result), it falls back to
+//     Spotify's search API using SimiliarFallback() to generate distractor answers.
+//
+// 4. If both methods fail to provide alternatives, the track is skipped.
+//
+//  5. Calculates a randomized playback start position for the track,
+//     choosing a moment between 0 and (duration - 15 seconds), ensuring
+//     there's at least a 15-second buffer from the end.
+//
+// 6. Constructs a model.Question object:
+//   - Adds the correct track name along with 3 distractor titles
+//   - Shuffles the answer options
+//   - Assigns a unique ID ("q1", "q2", etc)
+//   - Includes the playback position (in milliseconds)
+//
+// 7. Appends the question to the final result list.
 //
 // Returns:
-//   - []model.Question on success
-//   - error if any call to FetchSimilar fails
+//   - A slice of model.Question ready for the quiz,
+//   - Or an error if critical steps fail.
 //
-// Logging is used to report skipped tracks or failures to fetch recommendations.
+// Example response:
 //
-// Example question structure:
-//
-//	{
-//	  "id": "q1",
-//	  "trackId": "abc123",
-//	  "trackName": "Blinding Lights",
-//	  "answerOptions": ["Starboy", "Can't Feel My Face", "Save Your Tears", "Blinding Lights"],
-//	  "correctAnswer": "Blinding Lights"
-//	}
+//	[
+//	  {
+//	    "id": "q1",
+//	    "trackId": "abc123",
+//	    "trackName": "Shape of You",
+//	    "positionMs": 90213,
+//	    "answerOptions": ["Shape of You", "Thinking Out Loud", "Photograph", "Castle on the Hill"],
+//	    "correctAnswer": "Shape of You"
+//	  },
+//	  ...
+//	]
 func GenerateQuestions(tracks []model.Track, token string) ([]model.Question, error) {
 	var questions []model.Question
 	for i, track := range tracks {
