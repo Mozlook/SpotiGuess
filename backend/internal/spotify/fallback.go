@@ -9,6 +9,35 @@ import (
 	"strings"
 )
 
+// SimiliarFallback attempts to generate fallback track recommendations
+// by using Spotify's Search API instead of relying on Last.fm.
+//
+// It takes the name and artists of the original track and performs a
+// search against Spotify's `/search` endpoint.
+//
+// It filters out unwanted variants (e.g. remixes, live versions) and ensures
+// that the original track does not appear in the results.
+//
+// Parameters:
+//   - track: model.Track object containing ID, Name, Artists (used for search query)
+//   - token: A valid Spotify access token with `user-read-private` scope
+//
+// Returns:
+//   - []string: A slice of 3 recommended (but filtered) track names
+//   - error: If the API request fails or the response cannot be parsed
+//
+// Example response:
+//
+//	["Good Vibes", "Let It Go", "Feel the Beat"]
+//
+// Filtering logic:
+//   - Reject tracks whose names contain keywords like "remix", "acoustic", "live", etc.
+//   - Reject tracks that match the original `track.Name` (case-insensitive)
+//   - Only return the first 3 valid alternative tracks
+//
+// Spotify endpoint used:
+//
+//	GET https://api.spotify.com/v1/search?q=<track+name+artist>&type=track&limit=10&market=PL
 func SimiliarFallback(track model.Track, token string) ([]string, error) {
 	query := fmt.Sprintf("%s %s", track.Name, strings.Join(track.Artists, " "))
 	searchURL := "https://api.spotify.com/v1/search?" + url.Values{
