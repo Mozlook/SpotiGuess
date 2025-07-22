@@ -105,7 +105,7 @@ func RunQuizLoop(roomCode string) {
 		roomData, _ := json.Marshal(room)
 		store.Client.Set(store.Ctx, roomKey, roomData, 60*time.Minute)
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 
 		scoreboard := make(map[string]int)
 		for _, player := range room.Players {

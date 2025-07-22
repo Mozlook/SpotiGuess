@@ -20,9 +20,12 @@ function getSpotifyLoginUrl() {
 
 export default function LoginPage() {
     return (
-        <div>
-            <h1> 🎵 SpotiQuiz</h1>
-            <button onClick={() => (window.location.href = getSpotifyLoginUrl())}>
+        <div className="flex flex-col items-center justify-center p-8 text-white bg-gray-900 rounded-md shadow-md">
+            <h1 className="text-3xl font-bold mb-6">🎵 SpotiQuiz</h1>
+            <button
+                onClick={() => (window.location.href = getSpotifyLoginUrl())}
+                className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded shadow"
+            >
                 Zaloguj się przez Spotify
             </button>
         </div>

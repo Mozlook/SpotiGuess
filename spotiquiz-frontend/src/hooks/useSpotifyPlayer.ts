@@ -26,7 +26,7 @@ export default function useSpotifyPlayer(token: string | null) {
                 getOAuthToken: (cb) => {
                     cb(token);
                 },
-                volume: 0.5,
+                volume: 0.2,
             });
 
             playerRef.current = player;

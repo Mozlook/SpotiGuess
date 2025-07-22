@@ -97,8 +97,8 @@ const GamePage = () => {
     }
 
     return (
-        <div>
-            <h1>SpotiGuess - Gra</h1>
+        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start px-4 py-8">
+            <h1 className="text-4xl font-bold mb-8">SpotiGuess - Gra</h1>
             {isHost ? (
                 <HostGame
                     question={question}

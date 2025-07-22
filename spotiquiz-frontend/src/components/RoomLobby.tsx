@@ -10,10 +10,21 @@ const RoomLobby = () => {
     const socketRef = useRef<WebSocket | null>(null);
     const StartGame = async () => {
         try {
-            const res = await axios.post(`${url}/start-game`, {
-                roomCode: code,
-                hostId: playerID,
-            });
+            const token = localStorage.getItem("access_token");
+
+            const res = await axios.post(
+                `${url}/start-game`,
+                {
+                    roomCode: code,
+                    hostId: playerID,
+                },
+                {
+                    headers: {
+                        ...(token && { Authorization: `Bearer ${token}` }),
+                    },
+                },
+            );
+
             if (res.data.status) {
                 navigate(`/room/${code}`);
             }
@@ -53,17 +64,24 @@ const RoomLobby = () => {
         }
     }, [code, playerID, navigate, isHost]);
     return (
-        <>
-            <span>Room code: {code}</span>
+        <div className="text-white bg-gray-900 min-h-screen flex flex-col items-center justify-center gap-4">
+            <span className="text-lg">
+                Room code: <strong>{code}</strong>
+            </span>
             {isHost === true ? (
-                <div>
-                    <div>You are a host</div>
-                    <button onClick={StartGame}>Start Game</button>
+                <div className="flex flex-col items-center gap-2">
+                    <div>You are the host</div>
+                    <button
+                        className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+                        onClick={StartGame}
+                    >
+                        Start Game
+                    </button>
                 </div>
             ) : (
-                <div>Waiting for host</div>
+                <div>Waiting for host to start the game...</div>
             )}
-        </>
+        </div>
     );
 };
 export default RoomLobby;
