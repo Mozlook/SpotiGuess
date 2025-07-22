@@ -3,6 +3,7 @@ package game
 import (
 	"backend/internal/lastfm"
 	"backend/internal/model"
+	"backend/internal/spotify"
 	"fmt"
 	"log"
 	"math/rand"
@@ -42,7 +43,7 @@ import (
 //	  "answerOptions": ["Starboy", "Can't Feel My Face", "Save Your Tears", "Blinding Lights"],
 //	  "correctAnswer": "Blinding Lights"
 //	}
-func GenerateQuestions(tracks []model.Track) ([]model.Question, error) {
+func GenerateQuestions(tracks []model.Track, token string) ([]model.Question, error) {
 	var questions []model.Question
 	for i, track := range tracks {
 		var question model.Question
@@ -53,9 +54,13 @@ func GenerateQuestions(tracks []model.Track) ([]model.Question, error) {
 		}
 
 		recommendations, err := lastfm.FetchSimilar(track)
-		if err != nil {
-			log.Printf("Failed to fetch recommendations for track %s: %v", track.ID, err)
-			return nil, err
+		if err != nil || len(recommendations) == 0 {
+			log.Printf("Last.fm failed for track %s: %v — trying fallback", track.ID, err)
+			recommendations, err = spotify.SimiliarFallback(track, token)
+			if err != nil || len(recommendations) == 0 {
+				log.Printf("Fallback also failed for track %s: %v", track.ID, err)
+				continue
+			}
 		}
 
 		trackDuration := track.Duration // w ms

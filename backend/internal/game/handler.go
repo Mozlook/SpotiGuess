@@ -54,6 +54,15 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	token = strings.TrimSpace(token)
+
 	roomKey := "room:" + request.RoomCode
 	data, err := store.Client.Get(store.Ctx, roomKey).Result()
 	if err != nil {
@@ -99,7 +108,7 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		selectedTracks = allTracks[:10]
 	}
 
-	questions, err := GenerateQuestions(selectedTracks)
+	questions, err := GenerateQuestions(selectedTracks, token)
 	if err != nil {
 		http.Error(w, "Failed to generate questions", http.StatusInternalServerError)
 		return
