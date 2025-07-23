@@ -1,13 +1,8 @@
 package ws
 
 import (
-	"backend/internal/model"
-	"backend/internal/store"
 	"encoding/json"
-	"fmt"
 	"log"
-	"strconv"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -55,57 +50,6 @@ func (c *Client) readPump() {
 		}
 
 		switch socketMsg.Type {
-		case "answer":
-			var answer AnswerPayload
-			err := json.Unmarshal(socketMsg.Data, &answer)
-			if err != nil {
-				log.Println("invalid answer payload:", err)
-				continue
-			}
-
-			roomCode := c.roomCode
-			playerID := c.playerID
-
-			questionKey := fmt.Sprintf("questions:%s", roomCode)
-			data, err := store.Client.Get(store.Ctx, questionKey).Result()
-			if err != nil {
-				log.Println("failed to fetch questions", err)
-				return
-			}
-
-			var questions []model.Question
-			err = json.Unmarshal([]byte(data), &questions)
-			if err != nil {
-				log.Println("failed to parse questions:", err)
-				return
-			}
-			var question model.Question
-			found := false
-			for _, q := range questions {
-				if q.ID == answer.QuestionID {
-					question = q
-					found = true
-					break
-				}
-			}
-			if !found {
-				log.Println("question not found:", answer.QuestionID)
-				return
-			}
-
-			scoreKey := fmt.Sprintf("score:%s:%s", roomCode, playerID)
-			currentScore := 0
-			rawScore, err := store.Client.Get(store.Ctx, scoreKey).Result()
-			if err == nil {
-				currentScore, _ = strconv.Atoi(rawScore)
-			}
-
-			if answer.Selected == question.CorrectAnswer {
-				currentScore += 1000
-			}
-
-			store.Client.Set(store.Ctx, scoreKey, currentScore, 60*time.Minute)
-
 		default:
 			log.Println("unknown message type:", socketMsg.Type)
 		}

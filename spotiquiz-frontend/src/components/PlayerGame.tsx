@@ -33,9 +33,6 @@ const PlayerGame: React.FC<Props> = ({
 
             {view === "question" && question && (
                 <div className="w-full">
-                    <h2 className="text-2xl font-bold text-center mb-4">
-                        {question.trackName}
-                    </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {question.options.map((option) => (
                             <button

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import HostGame from "./HostGame.tsx";
 import PlayerGame from "./PlayerGame.tsx";
 export type Question = {
@@ -76,22 +77,25 @@ const GamePage = () => {
         );
     }
 
-    function handleAnswer(selected: string) {
+    async function handleAnswer(selected: string) {
         if (!question) return;
 
-        const playerId =
-            localStorage.getItem("spotify_id") || localStorage.getItem("guest_id");
-        const payload = {
-            type: "answer",
-            data: {
+        try {
+            const res = await axios.post("http://localhost:8080/submit-answer", {
+                roomCode: code,
                 questionId: question.id,
-                selected: selected,
-                playerId: playerId,
-            },
-        };
-        if (socketRef.current) {
-            socketRef.current.send(JSON.stringify(payload));
+                selected,
+                playerID,
+            });
+
+            const { correct, score, earned } = res.data;
+            console.log("Correct:", correct);
+            console.log("Earned:", earned);
+            console.log("New score:", score);
+
             setHasAnswered(true);
+        } catch (err) {
+            console.error("Submit failed:", err);
         }
     }
 
