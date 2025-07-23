@@ -133,6 +133,7 @@ func RunQuizLoop(roomCode string) {
 		payload, _ = json.Marshal(message)
 		ws.GlobalHub.Broadcast <- ws.BroadcastMessage{RoomCode: roomCode, Data: payload}
 
+		store.Client.Del(store.Ctx, timestampKey)
 		time.Sleep(5 * time.Second)
 	}
 	scoreboard := make(map[string]int)

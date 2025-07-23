@@ -187,33 +187,48 @@ func GetQuestionsHandler(w http.ResponseWriter, r *http.Request) {
 //
 //	{
 //	  "roomCode": "ABC123",
-//	  "questionId": "q1",
-//	  "selected": "Photograph",
-//	  "playerId": "spotify-user-456"
+//	  "questionId": "q3",
+//	  "selected": "Shape of You",
+//	  "playerId": "spotify-user-123"
 //	}
 //
 // The handler performs the following steps:
 //
-//  1. Retrieves the question list for the specified room from Redis ("questions:{roomCode}").
+//  1. Parses and validates the incoming JSON payload as AnswerRequest.
 //
-//  2. Locates the question matching the given questionId.
+//  2. Retrieves the list of questions for the given room from Redis under key:
+//     "questions:{roomCode}".
 //
-//  3. Compares the player's selected answer to the correct answer.
+//  3. Searches for the specific question matching the given questionId.
+//     If not found, responds with 404 Not Found.
 //
-//  4. Retrieves the player's current score from Redis (under "score:{roomCode}:{playerId}"),
-//     or initializes it to 0 if not found.
+//  4. Retrieves the player's current score from Redis under key:
+//     "score:{roomCode}:{playerId}". If not present or invalid, defaults to 0.
 //
-//  5. If the answer is correct, adds 1000 points to the player's score and updates the Redis entry.
+//  5. Retrieves the time the question was sent from Redis key:
+//     "question-time:{roomCode}:{questionId}", parsed as a Unix millisecond timestamp.
 //
-//  6. Responds with a JSON object indicating whether the answer was correct and the player's updated score:
+//  6. Calculates the number of points based on the time elapsed since the question was sent.
+//     - Players start with 1000 points.
+//     - 1 point is subtracted every 20 milliseconds.
+//     - The minimum awarded points is 500.
 //
-//     Response:
+//  7. If the selected answer is correct:
+//     - Adds the calculated points to the player's score.
+//     - Saves the new score back to Redis with a 60-minute TTL.
+//
+//  8. Responds with a JSON payload indicating if the answer was correct,
+//     the player's updated total score, and the number of points earned:
+//
+//     Example Response:
 //     {
 //     "correct": true,
-//     "score": 2000
+//     "score": 3200,
+//     "earned": 840
 //     }
 //
-// In case of an error (e.g. invalid request, question not found, Redis error), responds with the appropriate HTTP status code.
+// In case of any decoding errors, missing question or Redis failures, responds with appropriate
+// HTTP error codes (400, 404, or 500).
 func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	var request model.AnswerRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
