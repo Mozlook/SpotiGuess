@@ -1,8 +1,9 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type Scoreboard = Record<string, number>;
 
 const ScoreboardPage = () => {
+    const navigate = useNavigate();
     const location = useLocation();
     const scoreboard = location.state as Scoreboard | null;
     console.log("Location:", location);
@@ -14,8 +15,8 @@ const ScoreboardPage = () => {
 
     return (
         <div className=" bg-gray-900">
-            {" "}
             <div className="min-h-screen max-w-md mx-auto text-white p-6">
+                <button onClick={() => navigate("/")}>Home</button>
                 <h1 className="text-2xl font-bold mb-4">Final Scoreboard</h1>
                 <ul className="space-y-2">
                     {Object.entries(scoreboard)

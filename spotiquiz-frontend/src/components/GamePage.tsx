@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import HostGame from "./HostGame.tsx";
 import PlayerGame from "./PlayerGame.tsx";
@@ -17,6 +17,8 @@ const GamePage = () => {
     const token = localStorage.getItem("access_token");
     const { code } = useParams<string>();
     const playerID: string = getPlayerId();
+    const location = useLocation();
+    const playerName = location.state;
     const [question, setQuestion] = useState<Question | null>(null);
     const [scoreboard, setScoreboard] = useState<Record<string, number> | null>(
         null,
@@ -28,7 +30,7 @@ const GamePage = () => {
         if (!code || !playerID) return;
 
         socketRef.current = new WebSocket(
-            `ws://localhost:8080/ws/${code}/${playerID}`,
+            `ws://localhost:8080/ws/${code}/${playerName ? playerName : playerID}`,
         );
 
         socketRef.current.onopen = () => {
@@ -63,7 +65,7 @@ const GamePage = () => {
                 socketRef.current.close();
             }
         };
-    }, [code, playerID, navigate, scoreboard, question]);
+    }, [code, playerID, navigate, scoreboard, question, playerName]);
 
     function getPlayerId(): string {
         return (
@@ -85,7 +87,7 @@ const GamePage = () => {
                 roomCode: code,
                 questionId: question.id,
                 selected,
-                playerID,
+                playerID: playerName,
             });
 
             const { correct, score, earned } = res.data;

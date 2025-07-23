@@ -4,6 +4,7 @@ import LoginPage from "./LoginPage";
 import axios from "axios";
 const HomePage = () => {
     const player_ID: string | null = localStorage.getItem("spotify_id");
+    const [playerName, setPlayerName] = useState<string>("");
     const url: string = import.meta.env.VITE_BACKEND_URL;
     const [roomCode, setRoomCode] = useState<string>("");
     const navigate = useNavigate();
@@ -34,12 +35,16 @@ const HomePage = () => {
 
     const JoinRoom = async () => {
         const token = localStorage.getItem("access_token");
+        if (!playerName.trim()) {
+            alert("Enter Name");
+            return;
+        }
         try {
             const res = await axios.post(
                 `${url}/join-room`,
                 {
                     roomCode: roomCode,
-                    playerId: player_ID,
+                    playerId: playerName,
                 },
                 {
                     headers: {
@@ -48,7 +53,7 @@ const HomePage = () => {
                 },
             );
             localStorage.setItem("isHost", "false");
-            navigate(`/room/${res.data.roomCode}/lobby`);
+            navigate(`/room/${res.data.roomCode}/lobby`, { state: playerName });
         } catch (err) {
             console.error(err);
             alert("Couldn't join room");
@@ -87,6 +92,14 @@ const HomePage = () => {
 
             <div className="flex flex-col items-center gap-2">
                 <label className="text-sm font-light text-gray-300">Join room</label>
+                <input
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    placeholder="Display name"
+                    className="px-4 py-2 w-full rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600"
+                />
+
                 <div className="flex gap-2">
                     <input
                         type="text"

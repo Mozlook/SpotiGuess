@@ -1,8 +1,10 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef } from "react";
 import axios from "axios";
 const RoomLobby = () => {
     const { code } = useParams();
+    const location = useLocation();
+    const playerName = location.state;
     const isHost: boolean = localStorage.getItem("isHost") === "true";
     const playerID: string | null = localStorage.getItem("spotify_id");
     const url: string = import.meta.env.VITE_BACKEND_URL;
@@ -36,7 +38,7 @@ const RoomLobby = () => {
     useEffect(() => {
         if (isHost !== true) {
             socketRef.current = new WebSocket(
-                `ws://localhost:8080/ws/${code}/${playerID}`,
+                `ws://localhost:8080/ws/${code}/${playerName ? playerName : playerID}`,
             );
 
             socketRef.current.onopen = () => {
@@ -48,7 +50,7 @@ const RoomLobby = () => {
                 console.log("WS widomosc:", msg);
 
                 if (msg.type === "game-started") {
-                    navigate(`/room/${code}`);
+                    navigate(`/room/${code}`, { state: playerName });
                 }
             };
 
@@ -62,7 +64,7 @@ const RoomLobby = () => {
                 }
             };
         }
-    }, [code, playerID, navigate, isHost]);
+    }, [code, playerID, navigate, isHost, playerName]);
     return (
         <div className="text-white bg-gray-900 min-h-screen flex flex-col items-center justify-center gap-4">
             <span className="text-lg">

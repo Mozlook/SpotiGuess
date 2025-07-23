@@ -4,7 +4,6 @@ import (
 	"backend/internal/model"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -62,9 +61,7 @@ func FetchRecentTracks(token string) ([]model.Track, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Spotify FetchRecentTracks status:", resp.StatusCode)
 	body, _ := io.ReadAll(resp.Body)
-	log.Println("Spotify response body:", string(body))
 
 	var apiResp recentlyPlayedResponse
 

@@ -180,10 +180,6 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("Fetched %d tracks for player %s", len(tracks), request.PlayerID)
-		for _, t := range tracks {
-			log.Printf("- %s (%s)", t.Name, t.ID)
-		}
 
 		jsonData, _ := json.Marshal(tracks)
 
