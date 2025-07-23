@@ -14,7 +14,14 @@ const PlayerGame: React.FC<Props> = ({
     question,
     handleAnswer,
     hasAnswered,
+    scoreboard,
+    playerId,
 }) => {
+    const position = scoreboard
+        ? Object.entries(scoreboard)
+            .sort(([, a], [, b]) => b - a)
+            .findIndex(([id]) => id === playerId) + 1
+        : 1;
     return (
         <div className="w-full max-w-xl bg-gray-800 text-white p-6 rounded-xl shadow-md flex flex-col items-center">
             <div className="text-sm text-gray-400 mb-4">🎮 Player</div>
@@ -52,6 +59,9 @@ const PlayerGame: React.FC<Props> = ({
                     Please wait for the next round to begin.
                 </div>
             )}
+            <div className="mt-4 text-sm text-gray-300">
+                Your position: {position > 0 ? position : "?"}
+            </div>
         </div>
     );
 };

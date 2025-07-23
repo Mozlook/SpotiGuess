@@ -132,9 +132,24 @@ func RunQuizLoop(roomCode string) {
 
 		time.Sleep(5 * time.Second)
 	}
+	scoreboard := make(map[string]int)
+	for _, player := range room.Players {
+		scoreKey := "score:" + roomCode + ":" + player
+		data, err = store.Client.Get(store.Ctx, scoreKey).Result()
+
+		var score int
+		score, err = strconv.Atoi(data)
+		if err != nil {
+			log.Printf("invalid score for player %s: %v", player, err)
+			score = 0
+		}
+
+		scoreboard[player] = score
+	}
 
 	message := map[string]any{
 		"type": "game-over",
+		"data": scoreboard,
 	}
 	payload, _ := json.Marshal(message)
 	ws.GlobalHub.Broadcast <- ws.BroadcastMessage{

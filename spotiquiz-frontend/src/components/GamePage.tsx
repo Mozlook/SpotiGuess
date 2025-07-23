@@ -39,13 +39,12 @@ const GamePage = () => {
             console.log("WS widomosc:", msg);
 
             if (msg.type === "question" && msg.data) {
-                console.log(msg.data);
                 setQuestion(msg.data);
-                console.log(question);
                 setView("question");
                 setHasAnswered(false);
             }
             if (msg.type === "game-over") {
+                console.log("Navigating with:", msg.data);
                 navigate("/scoreboard", { state: msg.data });
             }
             if (msg.type === "scoreboard" && msg.data) {
@@ -112,9 +111,9 @@ const GamePage = () => {
                     question={question}
                     scoreboard={scoreboard}
                     view={view}
-                    playerID={playerID}
                     hasAnswered={hasAnswered}
                     handleAnswer={handleAnswer}
+                    playerId={playerID}
                 />
             )}
         </div>

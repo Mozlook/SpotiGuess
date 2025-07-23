@@ -77,7 +77,7 @@ const HostGame: React.FC<Props> = ({
             {view === "scoreboard" && scoreboard && (
                 <div className="w-full mt-4 space-y-2">
                     {Object.entries(scoreboard)
-                        .sort((a, b) => b[1] - a[1])
+                        .sort(([, a], [, b]) => b - a)
                         .map(([playerId, score]) => (
                             <div
                                 key={playerId}
