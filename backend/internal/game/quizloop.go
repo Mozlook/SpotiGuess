@@ -5,6 +5,7 @@ import (
 	"backend/internal/store"
 	"backend/internal/ws"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -97,6 +98,8 @@ func RunQuizLoop(roomCode string) {
 		}
 
 		payload, _ := json.Marshal(message)
+		timestampKey := fmt.Sprintf("question-time:%s:%s", roomCode, question.ID)
+		store.Client.Set(store.Ctx, timestampKey, time.Now().UnixMilli(), 60*time.Minute)
 		ws.GlobalHub.Broadcast <- ws.BroadcastMessage{
 			RoomCode: roomCode,
 			Data:     payload,

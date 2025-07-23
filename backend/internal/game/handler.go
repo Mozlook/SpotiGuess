@@ -259,9 +259,25 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 			currentScore = 0
 		}
 	}
+	timestampKey := fmt.Sprintf("question-time:%s:%s", request.RoomCode, request.QuestionID)
+	sentStr, err := store.Client.Get(store.Ctx, timestampKey).Result()
+	if err != nil {
+		log.Println("Failed to fetch question time:", err)
+	}
+
+	sentAt, err := strconv.ParseInt(sentStr, 10, 64)
+	var points int
+	if err != nil {
+		log.Println("Failed to parse timestamp:", err)
+		points = 500
+	}
+	now := time.Now().UnixMilli()
+	diff := (now - sentAt) / 20
+	points = 1000 - int(diff*1)
+	points = max(points, 500)
 
 	if request.Selected == question.CorrectAnswer {
-		currentScore += 1000
+		currentScore += points
 		store.Client.Set(store.Ctx, scoreKey, currentScore, 60*time.Minute)
 		if err != nil {
 			log.Println("Failed to update score:", err)
@@ -270,6 +286,7 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{
 		"correct": request.Selected == question.CorrectAnswer,
 		"score":   currentScore,
+		"earned":  points,
 	})
 }
 
