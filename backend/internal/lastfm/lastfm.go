@@ -62,6 +62,7 @@ func FetchSimilar(track model.Track) ([]string, error) {
 	)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
+
 	if err != nil {
 		return nil, err
 	}

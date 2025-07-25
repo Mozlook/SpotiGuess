@@ -163,6 +163,15 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error (unmarshal)", http.StatusInternalServerError)
 		return
 	}
+
+	normalized := strings.ToLower(strings.TrimSpace(request.PlayerID))
+	for _, player := range room.Players {
+		if strings.TrimSpace(strings.ToLower(player)) == normalized {
+			http.Error(w, "Player already exists", http.StatusConflict)
+			return
+		}
+	}
+
 	room.Players = append(room.Players, request.PlayerID)
 
 	jsonData, _ := json.Marshal(room)

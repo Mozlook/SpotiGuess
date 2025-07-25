@@ -55,8 +55,16 @@ const HomePage = () => {
             localStorage.setItem("isHost", "false");
             navigate(`/room/${res.data.roomCode}/lobby`, { state: playerName });
         } catch (err) {
+            if (axios.isAxiosError(err) && err.response?.status === 400) {
+                alert(err.response?.data);
+            } else if (axios.isAxiosError(err) && err.response?.status === 404) {
+                alert(err.response?.data);
+            } else if (axios.isAxiosError(err) && err.response?.status === 500) {
+                alert(err.response?.data);
+            } else if (axios.isAxiosError(err) && err.response?.status === 409) {
+                alert(err.response?.data);
+            }
             console.error(err);
-            alert("Couldn't join room");
             localStorage.removeItem("roomCode");
             localStorage.removeItem("isHost");
         }
@@ -71,7 +79,7 @@ const HomePage = () => {
         <div className="min-h-screen flex flex-col justify-center items-center gap-8 bg-gray-900 text-white p-8">
             {player_ID ? (
                 <div className="flex flex-col items-center gap-2">
-                    <span className="text-lg font-medium">✅ Logged in</span>
+                    <span className="text-lg font-medium">Logged in</span>
                     <button
                         onClick={handleLogout}
                         className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
