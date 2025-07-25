@@ -71,6 +71,7 @@ func SimiliarFallback(track model.Track, token string) ([]string, error) {
 
 	var tracks []string
 	bannedKeywords := []string{"acoustic", "remix", "live", "instrumental", "karaoke", "cover"}
+	seen := map[string]bool{}
 	for _, item := range result.Tracks.Items {
 		skip := false
 		for _, keyword := range bannedKeywords {
@@ -81,9 +82,13 @@ func SimiliarFallback(track model.Track, token string) ([]string, error) {
 		}
 		if strings.EqualFold(track.Name, item.Name) || skip {
 			continue
-		}
 
+		}
+		if seen[item.Name] {
+			continue
+		}
 		tracks = append(tracks, item.Name)
+		seen[item.Name] = true
 		if len(tracks) == 3 {
 			break
 		}

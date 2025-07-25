@@ -24,6 +24,12 @@ type TokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
+type TokenData struct {
+	AccessToken  string
+	RefreshToken string
+	ExpiresAt    int64
+}
+
 type SpotifyMeResponse struct {
 	ID string `json:"id"`
 }
@@ -108,20 +114,13 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tokenRes struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpiresIn    int    `json:"expires_in"` // seconds
-		TokenType    string `json:"token_type"`
-		Scope        string `json:"scope"`
-	}
+	var tokenRes TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenRes); err != nil {
 		log.Println("Failed to decode token response:", err)
 		http.Error(w, "Token decode error", http.StatusInternalServerError)
 		return
 	}
 
-	// 🔍 Get Spotify profile
 	userReq, _ := http.NewRequest("GET", "https://api.spotify.com/v1/me", nil)
 	userReq.Header.Set("Authorization", "Bearer "+tokenRes.AccessToken)
 
@@ -149,7 +148,6 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 💾 Save token data to Redis
 	tokenData, _ := json.Marshal(map[string]any{
 		"access_token":  tokenRes.AccessToken,
 		"refresh_token": tokenRes.RefreshToken,
@@ -167,4 +165,65 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		"access_token": tokenRes.AccessToken,
 		"spotify_id":   me.ID,
 	})
+}
+
+func EnsureValidToken(spotifyID string) (string, error) {
+	userKey := "user:" + spotifyID
+	redisData, err := store.Client.Get(store.Ctx, userKey).Result()
+	if err != nil {
+		return "", err
+	}
+
+	var tokenData TokenData
+	json.Unmarshal([]byte(redisData), &tokenData)
+
+	if tokenData.ExpiresAt > time.Now().Unix() {
+		return tokenData.AccessToken, nil
+	}
+	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
+	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
+
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", tokenData.RefreshToken)
+
+	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", clientID, clientSecret)))
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("refresh token failed: %s", string(body))
+	}
+
+	var refreshRes struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&refreshRes)
+	if err != nil {
+		return "", err
+	}
+
+	tokenData.AccessToken = refreshRes.AccessToken
+	tokenData.ExpiresAt = time.Now().Add(time.Duration(refreshRes.ExpiresIn) * time.Second).Unix()
+
+	updated, _ := json.Marshal(tokenData)
+	err = store.Client.Set(store.Ctx, userKey, updated, 60*time.Minute).Err()
+	if err != nil {
+		return "", err
+	}
+
+	return tokenData.AccessToken, nil
 }
