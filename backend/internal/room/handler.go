@@ -118,17 +118,20 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 //  2. Retrieves the Room object from Redis under "room:{roomCode}".
 //     - If not found, responds with HTTP 404.
 //
-//  3. Appends the joining playerId to the room's Players slice.
+//  3. Check if player with the same name already exists
+//     - If yes, respond with HTTP 409.
 //
-//  4. Updates the room in Redis with a 60-minute TTL.
+//  4. Appends the joining playerId to the room's Players slice.
 //
-//  5. If the request contains a valid Authorization header:
+//  5. Updates the room in Redis with a 60-minute TTL.
+//
+//  6. If the request contains a valid Authorization header:
 //     - Extracts the Spotify access token.
 //     - Fetches the player's 25 most recently played tracks via Spotify API.
 //     - Stores the tracks in Redis under "tracks:{roomCode}:{playerId}".
 //     - Also stores the access token in Redis under "player:{playerId}".
 //
-//  6. Responds with a JSON object confirming the join:
+//  7. Responds with a JSON object confirming the join:
 //
 //     Response:
 //     {
