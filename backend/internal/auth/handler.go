@@ -154,7 +154,7 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		"expires_at":    time.Now().Add(time.Duration(tokenRes.ExpiresIn) * time.Second).Unix(),
 	})
 	userKey := "user:" + me.ID
-	if err := store.Client.Set(store.Ctx, userKey, tokenData, 60*time.Minute).Err(); err != nil {
+	if err := store.Client.Set(store.Ctx, userKey, tokenData, 0).Err(); err != nil {
 		log.Println(" Failed to save token data:", err)
 		http.Error(w, "Failed to save user", http.StatusInternalServerError)
 		return
@@ -167,29 +167,52 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func EnsureValidToken(spotifyID string) (string, error) {
-	userKey := "user:" + spotifyID
+func EnsureValidTokenHandler(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		ClientID string `json:"clientId"`
+		Token    string `json:"token"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Println("Invalid request body:", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userKey := "user:" + request.ClientID
 	redisData, err := store.Client.Get(store.Ctx, userKey).Result()
 	if err != nil {
-		return "", err
+		log.Println("Failed to get user token from Redis:", err)
+		http.Error(w, "User token not found", http.StatusNotFound)
+		return
 	}
 
 	var tokenData TokenData
-	json.Unmarshal([]byte(redisData), &tokenData)
+	if err := json.Unmarshal([]byte(redisData), &tokenData); err != nil {
+		log.Println("Failed to parse token data:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	if tokenData.ExpiresAt > time.Now().Unix() {
-		return tokenData.AccessToken, nil
+		json.NewEncoder(w).Encode(map[string]string{
+			"access_token": tokenData.AccessToken,
+		})
+		return
 	}
+
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
 
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("refresh_token", tokenData.RefreshToken)
+	form := url.Values{}
+	form.Set("grant_type", "refresh_token")
+	form.Set("refresh_token", tokenData.RefreshToken)
 
-	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		log.Println("Failed to create refresh request:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", clientID, clientSecret)))
@@ -198,32 +221,40 @@ func EnsureValidToken(spotifyID string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		log.Println("Failed to call Spotify token endpoint:", err)
+		http.Error(w, "Spotify token request failed", http.StatusBadGateway)
+		return
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("refresh token failed: %s", string(body))
+		log.Printf("Spotify token refresh failed: %s\n", string(body))
+		http.Error(w, "Failed to refresh token", http.StatusUnauthorized)
+		return
 	}
 
 	var refreshRes struct {
 		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
+		ExpiresIn   int    `json:"expires_in"` // in seconds
 	}
-
-	err = json.NewDecoder(resp.Body).Decode(&refreshRes)
-	if err != nil {
-		return "", err
+	if err := json.NewDecoder(resp.Body).Decode(&refreshRes); err != nil {
+		log.Println("Failed to decode Spotify response:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	tokenData.AccessToken = refreshRes.AccessToken
 	tokenData.ExpiresAt = time.Now().Add(time.Duration(refreshRes.ExpiresIn) * time.Second).Unix()
 
 	updated, _ := json.Marshal(tokenData)
-	err = store.Client.Set(store.Ctx, userKey, updated, 60*time.Minute).Err()
-	if err != nil {
-		return "", err
+	if err := store.Client.Set(store.Ctx, userKey, updated, 60*time.Minute).Err(); err != nil {
+		log.Println("Failed to update token in Redis:", err)
+		http.Error(w, "Failed to save refreshed token", http.StatusInternalServerError)
+		return
 	}
 
-	return tokenData.AccessToken, nil
+	json.NewEncoder(w).Encode(map[string]string{
+		"access_token": tokenData.AccessToken,
+	})
 }

@@ -50,6 +50,7 @@ func main() {
 	r.HandleFunc("/start-game", game.StartGameHandler)
 	r.HandleFunc("/submit-answer", game.SubmitAnswerHandler)
 	r.HandleFunc("/ws/", ws.WSHandler)
+	r.HandleFunc("/auth/validate-token", auth.EnsureValidTokenHandler)
 	handler := middleware.EnableCORS(r)
 	log.Println("Server on :8080")
 	http.ListenAndServe(":8080", handler)
