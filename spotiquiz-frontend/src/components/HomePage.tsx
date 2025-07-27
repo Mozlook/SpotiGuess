@@ -15,12 +15,11 @@ const HomePage = () => {
         if (!token && !player_ID) return;
         const ValidateToken = async () => {
             try {
-                axios
-                    .post(`${url}/auth/validate-token`, {
-                        clientId: player_ID,
-                        token: token,
-                    })
-                    .then((res) => localStorage.setItem("access_token", res.data));
+                const res = await axios.post(`${url}/auth/validate-token`, {
+                    clientId: player_ID,
+                    token: token,
+                });
+                localStorage.setItem("access_token", res.data);
             } catch (err) {
                 localStorage.removeItem("spotify_id");
                 localStorage.removeItem("access_token");

@@ -25,9 +25,9 @@ type TokenResponse struct {
 }
 
 type TokenData struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresAt    int64
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
 }
 
 type SpotifyMeResponse struct {
@@ -194,7 +194,7 @@ func EnsureValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tokenData.ExpiresAt > time.Now().Unix() {
+	if tokenData.ExpiresIn > time.Now().Unix() {
 		json.NewEncoder(w).Encode(map[string]string{
 			"access_token": tokenData.AccessToken,
 		})
@@ -236,7 +236,7 @@ func EnsureValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var refreshRes struct {
 		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"` // in seconds
+		ExpiresIn   int    `json:"expires_in"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&refreshRes); err != nil {
 		log.Println("Failed to decode Spotify response:", err)
@@ -245,7 +245,7 @@ func EnsureValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokenData.AccessToken = refreshRes.AccessToken
-	tokenData.ExpiresAt = time.Now().Add(time.Duration(refreshRes.ExpiresIn) * time.Second).Unix()
+	tokenData.ExpiresIn = time.Now().Add(time.Duration(refreshRes.ExpiresIn) * time.Second).Unix()
 
 	updated, _ := json.Marshal(tokenData)
 	if err := store.Client.Set(store.Ctx, userKey, updated, 60*time.Minute).Err(); err != nil {
