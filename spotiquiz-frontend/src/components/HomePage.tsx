@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LoginPage from "./LoginPage";
 import axios from "axios";
 const HomePage = () => {
@@ -9,6 +9,26 @@ const HomePage = () => {
     const [roomCode, setRoomCode] = useState<string>("");
     const navigate = useNavigate();
     localStorage.removeItem("isHost");
+
+    useEffect(() => {
+        const token = localStorage.getItem("access_token");
+        if (!token && !player_ID) return;
+        const ValidateToken = async () => {
+            try {
+                axios
+                    .post(`${url}/auth/validate-token`, {
+                        clientId: player_ID,
+                        token: token,
+                    })
+                    .then((res) => localStorage.setItem("access_token", res.data));
+            } catch (err) {
+                localStorage.removeItem("spotify_id");
+                localStorage.removeItem("access_token");
+                console.log(err);
+            }
+        };
+        ValidateToken();
+    });
     const CreateRoom = async () => {
         try {
             const token = localStorage.getItem("access_token");
