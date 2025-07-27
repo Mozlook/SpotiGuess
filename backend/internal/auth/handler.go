@@ -167,6 +167,46 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// EnsureValidTokenHandler handles HTTP POST requests to /auth/validate-token.
+//
+// It expects a JSON payload containing a Spotify client ID and an access token:
+//
+//	{
+//	  "clientId": "user123",
+//	  "token": "BQD..."
+//	}
+//
+// The handler performs the following steps:
+//
+//  1. Parses and validates the incoming JSON payload.
+//
+//  2. Retrieves the stored token information for the given Spotify user ID from Redis,
+//     under the key:
+//
+//     "user:{clientId}" → {
+//     "access_token": "...",
+//     "refresh_token": "...",
+//     "expires_in": 1719440000
+//     }
+//
+//  3. If the access token has not expired (based on current time vs. `expires_in`),
+//     returns the existing access token.
+//
+//  4. If the token has expired, sends a POST request to Spotify's token endpoint
+//     to refresh the token using the stored refresh token.
+//
+//  5. Parses the refreshed access token and expiration time from Spotify's response,
+//     updates the Redis entry for the user with the new access token and expiration time.
+//
+//  6. Responds with a JSON object containing the valid (possibly refreshed) access token:
+//
+//     Response:
+//     {
+//     "access_token": "new_or_existing_token"
+//     }
+//
+// In case of errors (e.g. Redis read failure, expired refresh token, Spotify API failure),
+// responds with an appropriate HTTP error code such as 400, 404, 500, or 502.
 func EnsureValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		ClientID string `json:"clientId"`
