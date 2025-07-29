@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import LoginPage from "./LoginPage";
+import LoginPage from "../components/LoginPage";
 import axios from "axios";
+import CustomDialog from "@/components/CustomDialog";
 const HomePage = () => {
     const player_ID: string | null = localStorage.getItem("spotify_id");
-    const [playerName, setPlayerName] = useState<string>("");
     const url: string = import.meta.env.VITE_BACKEND_URL;
     const [roomCode, setRoomCode] = useState<string>("");
     const navigate = useNavigate();
@@ -53,9 +53,9 @@ const HomePage = () => {
         }
     };
 
-    const JoinRoom = async () => {
+    const JoinRoom = async (name: string) => {
         const token = localStorage.getItem("access_token");
-        if (!playerName.trim()) {
+        if (!name.trim()) {
             alert("Enter Name");
             return;
         }
@@ -64,7 +64,7 @@ const HomePage = () => {
                 `${url}/join-room`,
                 {
                     roomCode: roomCode,
-                    playerId: playerName,
+                    playerId: name,
                 },
                 {
                     headers: {
@@ -73,7 +73,7 @@ const HomePage = () => {
                 },
             );
             localStorage.setItem("isHost", "false");
-            navigate(`/room/${res.data.roomCode}/lobby`, { state: playerName });
+            navigate(`/room/${res.data.roomCode}/lobby`, { state: name });
         } catch (err) {
             if (axios.isAxiosError(err) && err.response?.status === 400) {
                 alert(err.response?.data);
@@ -97,53 +97,48 @@ const HomePage = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col justify-center items-center gap-8 bg-gray-900 text-white p-8">
-            {player_ID ? (
-                <div className="flex flex-col items-center gap-2">
-                    <span className="text-lg font-medium">Logged in</span>
+        <div className="min-h-screen flex flex-col justify-center items-center gap-10 bg-gray-950 text-white px-6 py-12">
+            <h1 className="text-3xl font-bold mb-6">Welcome to SpotiGuess</h1>
+
+            {player_ID && (
+                <div className="flex flex-col items-center gap-3">
+                    <span className="text-lg font-medium text-green-500">
+                        Logged in as {player_ID}
+                    </span>
+                    <button
+                        onClick={CreateRoom}
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow"
+                    >
+                        Create room
+                    </button>
+                </div>
+            )}
+
+            <div className="flex flex-col items-center gap-3">
+                <label className="text-sm text-gray-400">Join a room</label>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={roomCode}
+                        onChange={(e) => setRoomCode(e.target.value)}
+                        placeholder="Room code"
+                        className="px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600"
+                    />
+                    <CustomDialog onConfirm={JoinRoom} roomCode={roomCode} />
+                </div>
+            </div>
+
+            <div className="mt-8">
+                {player_ID ? (
                     <button
                         onClick={handleLogout}
                         className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
                     >
                         Logout
                     </button>
-                </div>
-            ) : (
-                <LoginPage />
-            )}
-
-            <button
-                onClick={CreateRoom}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow"
-            >
-                Create room
-            </button>
-
-            <div className="flex flex-col items-center gap-2">
-                <label className="text-sm font-light text-gray-300">Join room</label>
-                <input
-                    type="text"
-                    value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
-                    placeholder="Display name"
-                    className="px-4 py-2 w-full rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600"
-                />
-
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={roomCode}
-                        onChange={(e) => setRoomCode(e.target.value)}
-                        placeholder="ABC123"
-                        className="px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600"
-                    />
-                    <button
-                        onClick={JoinRoom}
-                        className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-                    >
-                        Join
-                    </button>
-                </div>
+                ) : (
+                    <LoginPage />
+                )}
             </div>
         </div>
     );

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import axios from "axios";
 import useSpotifyPlayer from "../hooks/useSpotifyPlayer";
-import type { Question } from "./GamePage";
+import type { Question } from "../pages/GamePage";
 
 type Props = {
     question: Question | null;

@@ -1,9 +1,9 @@
 import { Routes, Route } from "react-router-dom";
-import HomePage from "./components/HomePage";
+import HomePage from "./pages/HomePage";
 import SpotifyCallback from "./components/SpotifyCallback";
-import GamePage from "./components/GamePage";
-import RoomLobby from "./components/RoomLobby";
-import ScoreboardPage from "./components/ScoreboardPage";
+import GamePage from "./pages/GamePage";
+import RoomLobby from "./pages/RoomLobby";
+import ScoreboardPage from "./pages/ScoreboardPage";
 export default function App() {
     return (
         <Routes>

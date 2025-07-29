@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import HostGame from "./HostGame.tsx";
-import PlayerGame from "./PlayerGame.tsx";
+import HostGame from "../components/HostGame.tsx";
+import PlayerGame from "../components/PlayerGame.tsx";
 export type Question = {
     id: string;
     trackId: string;
