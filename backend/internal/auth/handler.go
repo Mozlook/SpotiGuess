@@ -288,7 +288,7 @@ func EnsureValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 	tokenData.ExpiresIn = time.Now().Add(time.Duration(refreshRes.ExpiresIn) * time.Second).Unix()
 
 	updated, _ := json.Marshal(tokenData)
-	if err := store.Client.Set(store.Ctx, userKey, updated, 60*time.Minute).Err(); err != nil {
+	if err := store.Client.Set(store.Ctx, userKey, updated, 0).Err(); err != nil {
 		log.Println("Failed to update token in Redis:", err)
 		http.Error(w, "Failed to save refreshed token", http.StatusInternalServerError)
 		return

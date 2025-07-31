@@ -4,6 +4,7 @@ import (
 	"backend/internal/model"
 	"backend/internal/spotify"
 	"backend/internal/store"
+	"backend/internal/ws"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -211,6 +212,15 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println("error saving user token", err)
 		}
+	}
+	message := map[string]any{
+		"type": "new-player",
+		"data": request.PlayerID,
+	}
+	payload, _ := json.Marshal(message)
+	ws.GlobalHub.Broadcast <- ws.BroadcastMessage{
+		RoomCode: request.RoomCode,
+		Data:     payload,
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{

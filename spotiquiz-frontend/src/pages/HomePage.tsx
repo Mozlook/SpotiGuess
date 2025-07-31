@@ -2,13 +2,17 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LoginPage from "../components/LoginPage";
 import axios from "axios";
-import CustomDialog from "@/components/CustomDialog";
+import CustomDialog from "../components/CustomDialog";
+import CustomAlert from "../components/CustomAlert";
 const HomePage = () => {
     const player_ID: string | null = localStorage.getItem("spotify_id");
     const url: string = import.meta.env.VITE_BACKEND_URL;
     const [roomCode, setRoomCode] = useState<string>("");
     const navigate = useNavigate();
-
+    const [error, setError] = useState<string | null>(null);
+    const [errorTitle, setErrorTitle] = useState<
+        string | number | null | undefined
+    >(null);
     localStorage.removeItem("isHost");
 
     useEffect(() => {
@@ -20,15 +24,25 @@ const HomePage = () => {
                     clientId: player_ID,
                     token: token,
                 });
-                localStorage.setItem("access_token", res.data);
+                localStorage.setItem("access_token", res.data.access_token);
             } catch (err) {
                 localStorage.removeItem("spotify_id");
                 localStorage.removeItem("access_token");
                 console.log(err);
+                if (axios.isAxiosError(err)) {
+                    setError(err.response?.data);
+                }
             }
         };
         ValidateToken();
     });
+
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(null), 4000);
+        return () => clearTimeout(timer);
+    }, [error]);
+
     const CreateRoom = async () => {
         try {
             const token = localStorage.getItem("access_token");
@@ -48,15 +62,19 @@ const HomePage = () => {
             navigate(`/room/${res.data.RoomCode}/lobby`);
         } catch (err) {
             console.error(err);
-            alert("Couldn't create room");
             localStorage.removeItem("isHost");
+            if (axios.isAxiosError(err)) {
+                setErrorTitle(err.response?.status);
+                setError(err.response?.data);
+            }
         }
     };
 
     const JoinRoom = async (name: string) => {
         const token = localStorage.getItem("access_token");
         if (!name.trim()) {
-            alert("Enter Name");
+            setError("Enter Name");
+            setErrorTitle("Error code: 400");
             return;
         }
         try {
@@ -76,13 +94,17 @@ const HomePage = () => {
             navigate(`/room/${res.data.roomCode}/lobby`, { state: name });
         } catch (err) {
             if (axios.isAxiosError(err) && err.response?.status === 400) {
-                alert(err.response?.data);
+                setError(err.response?.data);
+                setErrorTitle("Error code: 400");
             } else if (axios.isAxiosError(err) && err.response?.status === 404) {
-                alert(err.response?.data);
+                setError(err.response?.data);
+                setErrorTitle("Error code: 404");
             } else if (axios.isAxiosError(err) && err.response?.status === 500) {
-                alert(err.response?.data);
+                setError(err.response?.data);
+                setErrorTitle("Error code: 500");
             } else if (axios.isAxiosError(err) && err.response?.status === 409) {
-                alert(err.response?.data);
+                setError(err.response?.data);
+                setErrorTitle("Error code: 409");
             }
             console.error(err);
             localStorage.removeItem("roomCode");
@@ -97,42 +119,46 @@ const HomePage = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col justify-center items-center gap-10 bg-gray-950 text-white px-6 py-12">
-            <h1 className="text-3xl font-bold mb-6">Welcome to SpotiGuess</h1>
+        <div className="min-h-screen flex flex-col items-center justify-center gap-8 px-4 py-8 sm:px-6 sm:py-12 bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800">
+            {error && <CustomAlert msg={error} title={errorTitle} />}
+
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-center">
+                Welcome to SpotiGuess
+            </h1>
 
             {player_ID && (
-                <div className="flex flex-col items-center gap-3">
-                    <span className="text-lg font-medium text-green-500">
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <span className="text-base sm:text-lg font-medium text-green-600">
                         Logged in as {player_ID}
                     </span>
                     <button
                         onClick={CreateRoom}
-                        className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow"
+                        className="w-48 sm:w-56 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded shadow"
                     >
                         Create room
                     </button>
                 </div>
             )}
 
-            <div className="flex flex-col items-center gap-3">
-                <label className="text-sm text-gray-400">Join a room</label>
+            <div className="flex flex-col items-center gap-3 w-full max-w-sm sm:max-w-md text-center">
+                <label className="text-sm text-gray-600">Join a room</label>
                 <div className="flex gap-2">
                     <input
                         type="text"
                         value={roomCode}
                         onChange={(e) => setRoomCode(e.target.value)}
                         placeholder="Room code"
-                        className="px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600"
+                        className="w-full px-4 py-2 rounded bg-white text-gray-800 border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <CustomDialog onConfirm={JoinRoom} roomCode={roomCode} />
                 </div>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-6">
                 {player_ID ? (
                     <button
                         onClick={handleLogout}
-                        className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
+                        className="bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 rounded shadow"
                     >
                         Logout
                     </button>
