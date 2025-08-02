@@ -59,34 +59,41 @@ const HostGame: React.FC<Props> = ({
     }, [view, question, playerReady, accessToken]);
 
     return (
-        <div className="w-full max-w-xl bg-gray-900 text-white p-6 rounded-xl shadow-md flex flex-col items-center">
-            <div className="text-sm text-gray-400 mb-4">Host</div>
-            <div className="text-lg font-semibold mb-6 capitalize">
-                {view === "question" ? "Current Question" : "Scoreboard"}
+        <div className="w-full max-w-2xl bg-gray-100 text-gray-800 p-6 rounded-xl shadow-lg flex flex-col items-center border border-gray-200">
+            <div className="text-sm text-indigo-500 font-medium mb-3 uppercase tracking-wide">
+                Host Panel
             </div>
 
             {view === "question" && question && (
-                <div className="text-center text-lg">
-                    <p className="text-gray-300 mb-2">
-                        Select correct answer on your device!
+                <div className="text-center space-y-2">
+                    <p className="text-gray-600">
+                        Select the correct answer on your device!
                     </p>
-                    <p className="text-2xl font-bold">{question.trackName}</p>
                 </div>
             )}
 
             {view === "scoreboard" && scoreboard && (
-                <div className="w-full mt-4 space-y-2">
-                    {Object.entries(scoreboard)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([playerId, score]) => (
-                            <div
-                                key={playerId}
-                                className="flex justify-between px-4 py-2 bg-gray-800 rounded-lg"
-                            >
-                                <span className="text-gray-300">{playerId}</span>
-                                <span className="font-bold text-white">{score} pkt</span>
-                            </div>
-                        ))}
+                <div className="bg-indigo-200 w-full mt-6">
+                    <div className=" px-4 py-2 rounded-t-md rounded-b-lg text-indigo-700 font-medium text-center">
+                        Player Rankings
+                    </div>
+                    <ul className="divide-y divide-gray-200 rounded-b-sm">
+                        {Object.entries(scoreboard)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([playerId, score], idx) => (
+                                <li
+                                    key={playerId}
+                                    className="flex justify-between px-4 py-3 bg-indigo-50 transition rounded-b-sm"
+                                >
+                                    <span className="font-medium">
+                                        #{idx + 1} {playerId}
+                                    </span>
+                                    <span className="text-indigo-700 font-semibold">
+                                        {score} pts
+                                    </span>
+                                </li>
+                            ))}
+                    </ul>
                 </div>
             )}
         </div>

@@ -102,26 +102,31 @@ const GamePage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start px-4 py-8">
-            <h1 className="text-4xl font-bold mb-8">SpotiGuess - Gra</h1>
-            {isHost ? (
-                <HostGame
-                    question={question}
-                    scoreboard={scoreboard}
-                    view={view}
-                    playerID={playerID}
-                    accessToken={token}
-                />
-            ) : (
-                <PlayerGame
-                    question={question}
-                    scoreboard={scoreboard}
-                    view={view}
-                    hasAnswered={hasAnswered}
-                    handleAnswer={handleAnswer}
-                    playerId={playerID}
-                />
-            )}
+        <div className="min-h-screen bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800 flex flex-col items-center justify-start px-4 py-8">
+            <h1 className="text-4xl font-bold text-center text-indigo-800 mb-10 drop-shadow-sm">
+                SpotiGuess
+            </h1>
+
+            <div className="w-full max-w-3xl flex items-center justify-center">
+                {isHost ? (
+                    <HostGame
+                        question={question}
+                        scoreboard={scoreboard}
+                        view={view}
+                        playerID={playerID}
+                        accessToken={token}
+                    />
+                ) : (
+                    <PlayerGame
+                        question={question}
+                        scoreboard={scoreboard}
+                        view={view}
+                        hasAnswered={hasAnswered}
+                        handleAnswer={handleAnswer}
+                        playerId={playerID}
+                    />
+                )}
+            </div>
         </div>
     );
 };

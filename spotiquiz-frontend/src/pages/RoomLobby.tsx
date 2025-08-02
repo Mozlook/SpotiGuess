@@ -68,7 +68,7 @@ const RoomLobby = () => {
         };
     }, [code, playerID, navigate, isHost, playerName]);
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-100 via-white to-emerald-50 text-gray-800 flex flex-col items-center justify-center px-6 py-12 gap-8">
+        <div className="min-h-screen bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800 flex flex-col items-center justify-center px-6 py-12 gap-8">
             <div className="text-center">
                 <h1 className="text-3xl font-bold mb-2">Room Code</h1>
                 <p className="text-lg tracking-widest font-mono bg-gray-100 text-indigo-600 px-4 py-2 rounded shadow">

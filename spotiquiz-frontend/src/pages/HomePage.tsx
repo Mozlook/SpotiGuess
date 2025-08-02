@@ -90,6 +90,7 @@ const HomePage = () => {
                     },
                 },
             );
+            localStorage.setItem("name", name);
             localStorage.setItem("isHost", "false");
             navigate(`/room/${res.data.roomCode}/lobby`, { state: name });
         } catch (err) {

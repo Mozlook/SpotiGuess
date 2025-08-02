@@ -1,4 +1,5 @@
-import type { Question } from "./GamePage";
+import { useEffect, useState } from "react";
+import type { Question } from "../pages/GamePage";
 
 type Props = {
     question: Question | null;
@@ -17,18 +18,27 @@ const PlayerGame: React.FC<Props> = ({
     scoreboard,
     playerId,
 }) => {
-    const position = scoreboard
-        ? Object.entries(scoreboard)
-            .sort(([, a], [, b]) => b - a)
-            .findIndex(([id]) => id === playerId) + 1
-        : 1;
+    const [position, setPosition] = useState<number>(1);
+    const name = localStorage.getItem("name");
+    useEffect(() => {
+        const pos = scoreboard
+            ? Object.entries(scoreboard)
+                .sort(([, a], [, b]) => b - a)
+                .findIndex(([id]) => id === name) + 1
+            : 1;
+
+        setPosition(pos);
+    }, [scoreboard, playerId]);
     return (
-        <div className="w-full max-w-xl bg-gray-800 text-white p-6 rounded-xl shadow-md flex flex-col items-center">
-            <div className="text-sm text-gray-400 mb-4">🎮 Player</div>
-            <div className="text-lg font-semibold mb-6 capitalize">
+        <div className="w-full max-w-2xl bg-white text-gray-800 p-6 rounded-xl shadow-lg flex flex-col items-center border border-gray-200">
+            <div className="text-sm text-indigo-500 font-medium mb-3 uppercase tracking-wide">
+                Player Mode
+            </div>
+
+            <div className="text-xl font-semibold mb-6 text-center">
                 {view === "question"
                     ? "Answer the question!"
-                    : "Waiting for next question..."}
+                    : "Waiting for next round..."}
             </div>
 
             {view === "question" && question && (
@@ -39,9 +49,9 @@ const PlayerGame: React.FC<Props> = ({
                                 key={option}
                                 disabled={hasAnswered}
                                 onClick={() => handleAnswer(option)}
-                                className={`px-4 py-2 rounded-lg text-left border border-gray-600 transition duration-200 ${hasAnswered
-                                        ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                                        : "bg-gray-900 hover:bg-gray-700"
+                                className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition duration-200 border ${hasAnswered
+                                        ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                                        : "bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-300"
                                     }`}
                             >
                                 {option}
@@ -52,12 +62,16 @@ const PlayerGame: React.FC<Props> = ({
             )}
 
             {view !== "question" && (
-                <div className="text-center text-gray-400 mt-6 text-sm">
+                <div className="text-center text-sm text-gray-500 mt-6">
                     Please wait for the next round to begin.
                 </div>
             )}
-            <div className="mt-4 text-sm text-gray-300">
-                Your position: {position > 0 ? position : "?"}
+
+            <div className="mt-6 text-sm text-gray-500">
+                Your position:{" "}
+                <span className="font-semibold text-indigo-600">
+                    {position > 0 ? `#${position}` : "?"}
+                </span>
             </div>
         </div>
     );
