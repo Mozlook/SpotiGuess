@@ -80,15 +80,18 @@ func SimiliarFallback(track model.Track, token string) ([]string, error) {
 				break
 			}
 		}
+		normalizedName := strings.ToLower(item.Name)
+
 		if strings.EqualFold(track.Name, item.Name) || skip {
 			continue
-
 		}
-		if seen[item.Name] {
+
+		if seen[normalizedName] {
 			continue
 		}
+
 		tracks = append(tracks, item.Name)
-		seen[item.Name] = true
+		seen[normalizedName] = true
 		if len(tracks) == 3 {
 			break
 		}

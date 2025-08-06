@@ -25,6 +25,7 @@ const PlayerGame: React.FC<Props> = ({
     const [position, setPosition] = useState<number>(1);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+    const [earnedPoints, setEarnedPoints] = useState<number | null>();
     const name = localStorage.getItem("name");
     useEffect(() => {
         const pos = scoreboard
@@ -47,6 +48,7 @@ const PlayerGame: React.FC<Props> = ({
             });
             setSelectedAnswer(selected);
             setIsCorrect(res.data.correct);
+            setEarnedPoints(res.data.earned);
 
             setHasAnswered(true);
         } catch (err) {
@@ -104,6 +106,11 @@ const PlayerGame: React.FC<Props> = ({
                                 );
                             })}
                         </div>
+                        {hasAnswered && isCorrect && earnedPoints && (
+                            <div className="mt-4 text-green-600 font-semibold text-center text-lg">
+                                Correct! +{earnedPoints} points
+                            </div>
+                        )}
                     </div>
                 </>
             )}
