@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import HostGame from "../components/HostGame.tsx";
 import PlayerGame from "../components/PlayerGame.tsx";
 export type Question = {
@@ -79,28 +78,6 @@ const GamePage = () => {
         );
     }
 
-    async function handleAnswer(selected: string) {
-        if (!question) return;
-
-        try {
-            const res = await axios.post("http://localhost:8080/submit-answer", {
-                roomCode: code,
-                questionId: question.id,
-                selected,
-                playerID: playerName,
-            });
-
-            const { correct, score, earned } = res.data;
-            console.log("Correct:", correct);
-            console.log("Earned:", earned);
-            console.log("New score:", score);
-
-            setHasAnswered(true);
-        } catch (err) {
-            console.error("Submit failed:", err);
-        }
-    }
-
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800 flex flex-col items-center justify-start px-4 py-8">
             <h1 className="text-4xl font-bold text-center text-indigo-800 mb-10 drop-shadow-sm">
@@ -122,8 +99,9 @@ const GamePage = () => {
                         scoreboard={scoreboard}
                         view={view}
                         hasAnswered={hasAnswered}
-                        handleAnswer={handleAnswer}
-                        playerId={playerID}
+                        setHasAnswered={setHasAnswered}
+                        playerName={playerName}
+                        code={code}
                     />
                 )}
             </div>

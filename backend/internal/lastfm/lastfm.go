@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 )
 
 type similarResponse struct {
@@ -55,7 +56,7 @@ func FetchSimilar(track model.Track) ([]string, error) {
 
 	api_key := os.Getenv("LASTFM_API_KEY")
 	endpoint := fmt.Sprintf(
-		"http://ws.audioscrobbler.com/2.0/?method=track.getsimilar&track=%s&artist=%s&api_key=%s&format=json&limit=3",
+		"http://ws.audioscrobbler.com/2.0/?method=track.getsimilar&track=%s&artist=%s&api_key=%s&format=json&limit=8",
 		url.QueryEscape(track.Name),
 		url.QueryEscape(track.Artists[0]),
 		api_key,
@@ -81,8 +82,20 @@ func FetchSimilar(track model.Track) ([]string, error) {
 	}
 
 	var titles []string
+	seen := make(map[string]bool)
+
 	for _, t := range result.SimilarTracks.Track {
+		normalized := strings.ToLower(t.Name)
+		if seen[normalized] {
+			continue
+		}
+
+		seen[normalized] = true
 		titles = append(titles, t.Name)
+
+		if len(titles) == 3 {
+			break
+		}
 	}
 	return titles, nil
 

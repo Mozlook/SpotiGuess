@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import axios from "axios";
 import useSpotifyPlayer from "../hooks/useSpotifyPlayer";
+import TimedProgress from "./TimedProgress";
 import type { Question } from "../pages/GamePage";
 
 type Props = {
@@ -65,36 +66,46 @@ const HostGame: React.FC<Props> = ({
             </div>
 
             {view === "question" && question && (
-                <div className="text-center space-y-2">
-                    <p className="text-gray-600">
-                        Select the correct answer on your device!
-                    </p>
-                </div>
+                <>
+                    <div className="w-full mb-4">
+                        <TimedProgress duration={15} />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <p className="text-gray-600">
+                            Select the correct answer on your device!
+                        </p>
+                    </div>
+                </>
             )}
 
             {view === "scoreboard" && scoreboard && (
-                <div className="bg-indigo-200 w-full mt-6">
-                    <div className=" px-4 py-2 rounded-t-md rounded-b-lg text-indigo-700 font-medium text-center">
-                        Player Rankings
+                <>
+                    <div className="w-full mb-4">
+                        <TimedProgress duration={5} />
                     </div>
-                    <ul className="divide-y divide-gray-200 rounded-b-sm">
-                        {Object.entries(scoreboard)
-                            .sort(([, a], [, b]) => b - a)
-                            .map(([playerId, score], idx) => (
-                                <li
-                                    key={playerId}
-                                    className="flex justify-between px-4 py-3 bg-indigo-50 transition rounded-b-sm"
-                                >
-                                    <span className="font-medium">
-                                        #{idx + 1} {playerId}
-                                    </span>
-                                    <span className="text-indigo-700 font-semibold">
-                                        {score} pts
-                                    </span>
-                                </li>
-                            ))}
-                    </ul>
-                </div>
+                    <div className="bg-indigo-200 w-full">
+                        <div className="px-4 py-2 rounded-t-md rounded-b-lg text-indigo-700 font-medium text-center">
+                            Player Rankings
+                        </div>
+                        <ul className="divide-y divide-gray-200 rounded-b-sm">
+                            {Object.entries(scoreboard)
+                                .sort(([, a], [, b]) => b - a)
+                                .map(([playerId, score], idx) => (
+                                    <li
+                                        key={playerId}
+                                        className="flex justify-between px-4 py-3 bg-indigo-50 transition rounded-b-sm"
+                                    >
+                                        <span className="font-medium">
+                                            #{idx + 1} {playerId}
+                                        </span>
+                                        <span className="text-indigo-700 font-semibold">
+                                            {score} pts
+                                        </span>
+                                    </li>
+                                ))}
+                        </ul>
+                    </div>
+                </>
             )}
         </div>
     );
