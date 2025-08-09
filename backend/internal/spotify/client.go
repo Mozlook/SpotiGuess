@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 type recentlyPlayedResponse struct {
@@ -86,4 +88,106 @@ func FetchRecentTracks(token string) ([]model.Track, error) {
 		})
 	}
 	return tracks, nil
+}
+
+func SearchSpotifyHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	searchType := r.URL.Query().Get("type")
+	userID := r.URL.Query().Get("userId")
+
+	if query == "" || (searchType != "playlist" && searchType != "artist") || userID == "" {
+		http.Error(w, "Missing or invalid query parameters", http.StatusBadRequest)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	token = strings.TrimSpace(token)
+
+	results, err := SearchSpotify(query, searchType, token)
+	if err != nil {
+		http.Error(w, "Spotify search failed", http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+func SearchSpotify(query string, searchType string, token string) ([]map[string]string, error) {
+	base := "https://api.spotify.com/v1/search"
+	params := url.Values{}
+	params.Set("q", query)
+	params.Set("type", searchType)
+	params.Set("limit", "10")
+
+	req, err := http.NewRequest("GET", base+"?"+params.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var data map[string]any
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+
+	var results []map[string]string
+
+	if searchType == "playlist" {
+		items := data["playlists"].(map[string]any)["items"].([]any)
+		for _, raw := range items {
+			p := raw.(map[string]any)
+
+			imageURL := ""
+			images := p["images"].([]any)
+			if len(images) > 0 {
+				image := images[0].(map[string]any)
+				imageURL = image["url"].(string)
+			}
+
+			results = append(results, map[string]string{
+				"id":    p["id"].(string),
+				"name":  p["name"].(string),
+				"owner": p["owner"].(map[string]any)["display_name"].(string),
+				"image": imageURL,
+			})
+		}
+	}
+
+	if searchType == "artist" {
+		items := data["artists"].(map[string]any)["items"].([]any)
+		for _, raw := range items {
+			a := raw.(map[string]any)
+
+			imageURL := ""
+			images := a["images"].([]any)
+			if len(images) > 0 {
+				image := images[0].(map[string]any)
+				imageURL = image["url"].(string)
+			}
+
+			results = append(results, map[string]string{
+				"id":    a["id"].(string),
+				"name":  a["name"].(string),
+				"image": imageURL,
+			})
+		}
+	}
+
+	return results, nil
 }

@@ -5,6 +5,7 @@ import (
 	"backend/internal/game"
 	"backend/internal/middleware"
 	"backend/internal/room"
+	"backend/internal/spotify"
 	"backend/internal/store"
 	"backend/internal/ws"
 	"log"
@@ -51,6 +52,7 @@ func main() {
 	r.HandleFunc("/submit-answer", game.SubmitAnswerHandler)
 	r.HandleFunc("/ws/", ws.WSHandler)
 	r.HandleFunc("/auth/validate-token", auth.EnsureValidTokenHandler)
+	r.HandleFunc("/spotify/search", spotify.SearchSpotifyHandler)
 	handler := middleware.EnableCORS(r)
 	log.Println("Server on :8080")
 	http.ListenAndServe(":8080", handler)

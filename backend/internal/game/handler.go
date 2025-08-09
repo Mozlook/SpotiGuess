@@ -79,23 +79,21 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid HostId", http.StatusForbidden)
 		return
 	}
+	mode := request.GameMode
+	query := request.QueryData
+
 	var allTracks []model.Track
-	for _, playerID := range room.Players {
-		key := fmt.Sprintf("tracks:%s:%s", request.RoomCode, playerID)
-		raw, err := store.Client.Get(store.Ctx, key).Result()
-		if err != nil {
-			log.Println("no tracks for player:", playerID, err)
-			continue
-		}
 
-		var tracks []model.Track
-		err = json.Unmarshal([]byte(raw), &tracks)
-		if err != nil {
-			log.Println("invalid track data for player:", playerID, err)
-			continue
-		}
-
-		allTracks = append(allTracks, tracks...)
+	switch mode {
+	case "players":
+		allTracks = tracksFromPlayers(room.Players, room.Code)
+	case "playlist":
+		allTracks = tracksFromPlaylist(query, token)
+	case "artist":
+		allTracks = tracksFromArtist(query, token)
+	default:
+		http.Error(w, "Unsupported game mode", http.StatusBadRequest)
+		return
 	}
 
 	rand.Shuffle(len(allTracks), func(i, j int) {
