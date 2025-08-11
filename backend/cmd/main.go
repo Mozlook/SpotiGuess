@@ -45,7 +45,7 @@ func main() {
 	store.InitRedis()
 
 	r := http.NewServeMux()
-	r.HandleFunc("/go", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("GENERIC handler hit!", r.URL.Path)
 		w.Write([]byte("Hello from root: " + r.URL.Path))
 	})
@@ -53,13 +53,14 @@ func main() {
 	r.HandleFunc("/create-room", room.CreateRoomHandler)
 	r.HandleFunc("/join-room", room.JoinRoomHandler)
 	r.HandleFunc("/room/", roomRouterHandler)
-	r.HandleFunc("/go/auth/callback", auth.AuthCallbackHandler)
+	r.HandleFunc("/auth/callback", auth.AuthCallbackHandler)
 	r.HandleFunc("/start-game", game.StartGameHandler)
 	r.HandleFunc("/submit-answer", game.SubmitAnswerHandler)
 	r.HandleFunc("/ws/", ws.WSHandler)
 	r.HandleFunc("/auth/validate-token", auth.EnsureValidTokenHandler)
 	r.HandleFunc("/spotify/search", spotify.SearchSpotifyHandler)
-	handler := middleware.EnableCORS(r)
+	handler := http.StripPrefix("/go", r)
+	handler = middleware.EnableCORS(handler)
 	log.Println("Server on :8081")
 	http.ListenAndServe(":8081", handler)
 }
