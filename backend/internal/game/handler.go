@@ -100,10 +100,10 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		allTracks[i], allTracks[j] = allTracks[j], allTracks[i]
 	})
 	var selectedTracks []model.Track
-	if len(allTracks) < 5 {
+	if len(allTracks) < 10 {
 		selectedTracks = allTracks
 	} else {
-		selectedTracks = allTracks[:5]
+		selectedTracks = allTracks[:10]
 	}
 
 	questions, err := GenerateQuestions(selectedTracks, token)
