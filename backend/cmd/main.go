@@ -55,5 +55,5 @@ func main() {
 	r.HandleFunc("/spotify/search", spotify.SearchSpotifyHandler)
 	handler := middleware.EnableCORS(r)
 	log.Println("Server on :8080")
-	http.ListenAndServe(":8080", handler)
+	http.ListenAndServe(":8081", handler)
 }
