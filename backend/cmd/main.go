@@ -53,7 +53,8 @@ func main() {
 	r.HandleFunc("/ws/", ws.WSHandler)
 	r.HandleFunc("/auth/validate-token", auth.EnsureValidTokenHandler)
 	r.HandleFunc("/spotify/search", spotify.SearchSpotifyHandler)
-	handler := middleware.EnableCORS(r)
-	log.Println("Server on :8080")
+	handler := http.StripPrefix("/go", r)
+	handler = middleware.EnableCORS(handler)
+	log.Println("Server on :8081")
 	http.ListenAndServe(":8081", handler)
 }
