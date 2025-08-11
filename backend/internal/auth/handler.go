@@ -70,6 +70,7 @@ type SpotifyMeResponse struct {
 // In case of an error (e.g. invalid code, Spotify API failure, or Redis write failure),
 // responds with an appropriate HTTP error status.
 func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("AuthCallbackHandler hit!")
 	var body struct {
 		Code string `json:"code"`
 	}
