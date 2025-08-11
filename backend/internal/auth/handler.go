@@ -81,7 +81,7 @@ func AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
-	redirectURI := "http://127.0.0.1:5173/callback"
+	redirectURI := os.Getenv("SPOTIFY_REDIRECT_URI")
 
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")

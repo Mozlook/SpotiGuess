@@ -11,7 +11,8 @@ const RoomLobby = () => {
     const isHost: boolean = localStorage.getItem("isHost") === "true";
     const playerID: string | null = localStorage.getItem("spotify_id");
     const token = localStorage.getItem("access_token");
-    const url: string = import.meta.env.VITE_BACKEND_URL;
+    const apiUrl: string = import.meta.env.VITE_BACKEND_API_URL;
+    const wsUrl: string = import.meta.env.VITE_BACKEND_WS_URL;
     const navigate = useNavigate();
 
     const socketRef = useRef<WebSocket | null>(null);
@@ -38,7 +39,7 @@ const RoomLobby = () => {
             if (gameMode === "playlist") requestBody.tracksData = playlistUrl;
             if (gameMode === "artist") requestBody.tracksData = artistID;
 
-            const res = await axios.post(`${url}/start-game`, requestBody, {
+            const res = await axios.post(`${apiUrl}/start-game`, requestBody, {
                 headers: {
                     ...(token && { Authorization: `Bearer ${token}` }),
                 },
@@ -55,7 +56,7 @@ const RoomLobby = () => {
     // WebSocket
     useEffect(() => {
         socketRef.current = new WebSocket(
-            `ws://localhost:8080/ws/${code}/${playerName || playerID}`,
+            `${wsUrl}/ws/${code}/${playerName || playerID}`,
         );
 
         socketRef.current.onmessage = (event) => {
@@ -77,7 +78,7 @@ const RoomLobby = () => {
         if (!searchQuery || gameMode === "players") return;
 
         try {
-            const res = await axios.get(`${url}/spotify/search`, {
+            const res = await axios.get(`${apiUrl}/spotify/search`, {
                 params: {
                     q: searchQuery,
                     type: gameMode,

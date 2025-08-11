@@ -26,6 +26,7 @@ const PlayerGame: React.FC<Props> = ({
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [earnedPoints, setEarnedPoints] = useState<number | null>();
+    const apiUrl = import.meta.env.VITE_BACKEND.API.URL;
     const name = localStorage.getItem("name");
     useEffect(() => {
         const pos = scoreboard
@@ -40,7 +41,7 @@ const PlayerGame: React.FC<Props> = ({
         if (!question) return;
 
         try {
-            const res = await axios.post("http://localhost:8080/submit-answer", {
+            const res = await axios.post(`${apiUrl}/submit-answer`, {
                 roomCode: code,
                 questionId: question.id,
                 selected,

@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import axios from "axios";
 
 export default function SpotifyCallback() {
+    const apiUrl = import.meta.env.VITE_BACKEND_API_URL;
     useEffect(() => {
         const code = new URLSearchParams(window.location.search).get("code");
 
         if (code) {
             (async () => {
                 try {
-                    const res = await axios.post("http://localhost:8080/auth/callback", {
+                    const res = await axios.post(`${apiUrl}/auth/callback`, {
                         code,
                     });
 

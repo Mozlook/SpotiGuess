@@ -149,41 +149,96 @@ func SearchSpotify(query string, searchType string, token string) ([]map[string]
 	var results []map[string]string
 
 	if searchType == "playlist" {
-		items := data["playlists"].(map[string]any)["items"].([]any)
+		playlistsRaw, ok := data["playlists"]
+		if !ok || playlistsRaw == nil {
+			return results, nil
+		}
+
+		playlistsMap, ok := playlistsRaw.(map[string]any)
+		if !ok {
+			return results, nil
+		}
+
+		itemsRaw, ok := playlistsMap["items"]
+		if !ok || itemsRaw == nil {
+			return results, nil
+		}
+
+		items, ok := itemsRaw.([]any)
+		if !ok {
+			return results, nil
+		}
+
 		for _, raw := range items {
-			p := raw.(map[string]any)
+			p, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			id, _ := p["id"].(string)
+			name, _ := p["name"].(string)
+
+			owner := ""
+			if ownerMap, ok := p["owner"].(map[string]any); ok {
+				owner, _ = ownerMap["display_name"].(string)
+			}
 
 			imageURL := ""
-			images := p["images"].([]any)
-			if len(images) > 0 {
-				image := images[0].(map[string]any)
-				imageURL = image["url"].(string)
+			if images, ok := p["images"].([]any); ok && len(images) > 0 {
+				if img, ok := images[0].(map[string]any); ok {
+					imageURL, _ = img["url"].(string)
+				}
 			}
 
 			results = append(results, map[string]string{
-				"id":    p["id"].(string),
-				"name":  p["name"].(string),
-				"owner": p["owner"].(map[string]any)["display_name"].(string),
+				"id":    id,
+				"name":  name,
+				"owner": owner,
 				"image": imageURL,
 			})
 		}
 	}
 
 	if searchType == "artist" {
-		items := data["artists"].(map[string]any)["items"].([]any)
+		artistsRaw, ok := data["artists"]
+		if !ok || artistsRaw == nil {
+			return results, nil
+		}
+
+		artistsMap, ok := artistsRaw.(map[string]any)
+		if !ok {
+			return results, nil
+		}
+
+		itemsRaw, ok := artistsMap["items"]
+		if !ok || itemsRaw == nil {
+			return results, nil
+		}
+
+		items, ok := itemsRaw.([]any)
+		if !ok {
+			return results, nil
+		}
+
 		for _, raw := range items {
-			a := raw.(map[string]any)
+			a, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			id, _ := a["id"].(string)
+			name, _ := a["name"].(string)
 
 			imageURL := ""
-			images := a["images"].([]any)
-			if len(images) > 0 {
-				image := images[0].(map[string]any)
-				imageURL = image["url"].(string)
+			if images, ok := a["images"].([]any); ok && len(images) > 0 {
+				if img, ok := images[0].(map[string]any); ok {
+					imageURL, _ = img["url"].(string)
+				}
 			}
 
 			results = append(results, map[string]string{
-				"id":    a["id"].(string),
-				"name":  a["name"].(string),
+				"id":    id,
+				"name":  name,
 				"image": imageURL,
 			})
 		}

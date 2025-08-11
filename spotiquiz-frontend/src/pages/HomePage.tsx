@@ -6,7 +6,7 @@ import CustomDialog from "../components/CustomDialog";
 import CustomAlert from "../components/CustomAlert";
 const HomePage = () => {
     const player_ID: string | null = localStorage.getItem("spotify_id");
-    const url: string = import.meta.env.VITE_BACKEND_URL;
+    const apiUrl: string = import.meta.env.VITE_BACKEND_API_URL;
     const [roomCode, setRoomCode] = useState<string>("");
     const navigate = useNavigate();
     const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ const HomePage = () => {
         if (!token && !player_ID) return;
         const ValidateToken = async () => {
             try {
-                const res = await axios.post(`${url}/auth/validate-token`, {
+                const res = await axios.post(`${apiUrl}/auth/validate-token`, {
                     clientId: player_ID,
                     token: token,
                 });
@@ -35,7 +35,7 @@ const HomePage = () => {
             }
         };
         ValidateToken();
-    });
+    }, []);
 
     useEffect(() => {
         if (!error) return;
@@ -48,7 +48,7 @@ const HomePage = () => {
             const token = localStorage.getItem("access_token");
 
             const res = await axios.post(
-                `${url}/create-room`,
+                `${apiUrl}/create-room`,
                 {
                     hostId: player_ID,
                 },
@@ -79,7 +79,7 @@ const HomePage = () => {
         }
         try {
             const res = await axios.post(
-                `${url}/join-room`,
+                `${apiUrl}/join-room`,
                 {
                     roomCode: roomCode,
                     playerId: name,
