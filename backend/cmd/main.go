@@ -8,6 +8,7 @@ import (
 	"backend/internal/spotify"
 	"backend/internal/store"
 	"backend/internal/ws"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -44,6 +45,11 @@ func main() {
 	store.InitRedis()
 
 	r := http.NewServeMux()
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("GENERIC handler hit!", r.URL.Path)
+		w.Write([]byte("Hello from root: " + r.URL.Path))
+	})
+
 	r.HandleFunc("/create-room", room.CreateRoomHandler)
 	r.HandleFunc("/join-room", room.JoinRoomHandler)
 	r.HandleFunc("/room/", roomRouterHandler)
