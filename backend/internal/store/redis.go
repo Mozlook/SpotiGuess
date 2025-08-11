@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"os"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -10,9 +11,9 @@ var Ctx = context.Background()
 var Client *redis.Client
 
 func InitRedis() {
-
+	redisAddr := os.Getenv("REDIS")
 	Client = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisAddr,
 		Password: "",
 		DB:       0,
 		Protocol: 2,
