@@ -16,6 +16,7 @@ const GamePage = () => {
     const token = localStorage.getItem("access_token");
     const { code } = useParams<string>();
     const playerID: string = getPlayerId();
+    const wsUrl: string = import.meta.env.VITE_BACKEND_WS_URL;
     const location = useLocation();
     const playerName = location.state;
     const [question, setQuestion] = useState<Question | null>(null);
@@ -29,7 +30,7 @@ const GamePage = () => {
         if (!code || !playerID) return;
 
         socketRef.current = new WebSocket(
-            `ws://localhost:8080/ws/${code}/${playerName ? playerName : playerID}`,
+            `${wsUrl}/ws/${code}/${playerName ? playerName : playerID}`,
         );
 
         socketRef.current.onopen = () => {
