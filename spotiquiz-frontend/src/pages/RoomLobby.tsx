@@ -4,6 +4,11 @@ import axios from "axios";
 
 type GameMode = "players" | "playlist" | "artist";
 
+type SearchItem = {
+    id: string;
+    name: string;
+    image: string;
+};
 const RoomLobby = () => {
     const { code } = useParams();
     const location = useLocation();
@@ -19,25 +24,31 @@ const RoomLobby = () => {
 
     const [playersList, setPlayersList] = useState<string[]>([]);
     const [gameMode, setGameMode] = useState<GameMode>("players");
-    const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<
-        { id: string; name: string; image: string }[]
-    >([]);
-    const [playlistUrl, setPlaylistUrl] = useState("");
-    const [artistID, setArtistID] = useState("");
-
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+    const [selectedSources, setSelectedSources] = useState<SearchItem[]>([]);
+    const [playlistUrl, setPlaylistUrl] = useState<string>("");
+    const [artistID, setArtistID] = useState<string>("");
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<Error | null>(null);
     // Start game
     const StartGame = async () => {
         try {
+            setLoading(true);
+            setError(null);
+            if (selectedSources.length === 0) {
+                setError(new Error("Select Artist or Playlist"));
+                return;
+            }
+
+            const tracksData = selectedSources.map((s) => s.id);
+
             const requestBody = {
                 roomCode: code,
                 hostId: playerID,
                 gameMode: gameMode,
-                tracksData: "",
+                tracksData: tracksData,
             };
-
-            if (gameMode === "playlist") requestBody.tracksData = playlistUrl;
-            if (gameMode === "artist") requestBody.tracksData = artistID;
 
             const res = await axios.post(`${apiUrl}/start-game`, requestBody, {
                 headers: {
@@ -50,6 +61,11 @@ const RoomLobby = () => {
             }
         } catch (err) {
             console.error(err);
+            if (axios.isAxiosError(err)) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -72,7 +88,7 @@ const RoomLobby = () => {
         return () => {
             socketRef.current?.close();
         };
-    }, [code, playerID, navigate, isHost, playerName]);
+    }, [code, playerID, navigate, isHost, playerName, wsUrl]);
 
     const handleSearch = async () => {
         if (!searchQuery || gameMode === "players") return;
@@ -89,7 +105,7 @@ const RoomLobby = () => {
                 },
             });
 
-            setSearchResults(res.data);
+            setSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Search failed", err);
         }
@@ -111,10 +127,12 @@ const RoomLobby = () => {
                     </p>
                     <button
                         onClick={StartGame}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded shadow"
+                        disabled={loading}
+                        className={`${loading ? "bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"} text-white font-semibold py-2 px-6 rounded shadow`}
                     >
-                        Start Game
+                        {loading ? "Creating questions..." : "Start Game"}
                     </button>
+                    <p>{error?.message}</p>
 
                     <div className="flex flex-col gap-4 mt-6 w-full">
                         <label className="text-sm font-medium text-gray-600">
@@ -122,7 +140,10 @@ const RoomLobby = () => {
                         </label>
                         <select
                             value={gameMode}
-                            onChange={(e) => setGameMode(e.target.value as GameMode)}
+                            onChange={(e) => {
+                                setGameMode(e.target.value as GameMode);
+                                setSelectedSources([]);
+                            }}
                             className="p-2 rounded border bg-white text-gray-800"
                         >
                             <option value="players">Based on players</option>
@@ -132,12 +153,39 @@ const RoomLobby = () => {
 
                         {(gameMode === "playlist" || gameMode === "artist") && (
                             <>
+                                {selectedSources.length > 0 && (
+                                    <>
+                                        {selectedSources.map((source) => (
+                                            <button
+                                                key={source.id}
+                                                className="flex items-center gap-3 p-2 hover:bg-gray-100 cursor-pointer rounded"
+                                                onClick={() =>
+                                                    setSelectedSources((prev) =>
+                                                        prev.filter((s) => s.id !== source.id),
+                                                    )
+                                                }
+                                            >
+                                                <img
+                                                    src={
+                                                        source.image ||
+                                                        "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
+                                                    }
+                                                    alt={source.name}
+                                                    className="w-10 h-10 object-cover rounded"
+                                                />
+                                                <span className="text-sm">{source.name}</span>
+                                            </button>
+                                        ))}
+                                    </>
+                                )}
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
                                         placeholder={`Search ${gameMode}`}
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                        }}
                                         className="px-4 py-2 rounded border bg-white text-gray-800 flex-1"
                                     />
                                     <button
@@ -148,33 +196,31 @@ const RoomLobby = () => {
                                     </button>
                                 </div>
 
-                                {searchResults.length > 0 && (
-                                    <div className="w-full bg-white rounded border p-2 max-h-64 overflow-y-auto shadow-sm">
-                                        {searchResults.map((result) => (
-                                            <div
-                                                key={result.id}
-                                                onClick={() => {
-                                                    if (gameMode === "playlist") {
-                                                        setPlaylistUrl(result.id);
-                                                        setSearchQuery(result.name);
-                                                    } else {
-                                                        setArtistID(result.id);
-                                                        setSearchQuery(result.name);
-                                                    }
-                                                    setSearchResults([]);
-                                                }}
-                                                className="flex items-center gap-3 p-2 hover:bg-gray-100 cursor-pointer rounded"
-                                            >
-                                                <img
-                                                    src={result.image}
-                                                    alt={result.name}
-                                                    className="w-10 h-10 object-cover rounded"
-                                                />
-                                                <span className="text-sm">{result.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                {searchResults.map((result) => (
+                                    <button
+                                        key={result.id}
+                                        onClick={() => {
+                                            setSelectedSources((prev) =>
+                                                prev.some((s) => s.id === result.id)
+                                                    ? prev
+                                                    : [...prev, result],
+                                            );
+                                            setSearchQuery(result.name);
+                                            setSearchResults([]);
+                                        }}
+                                        className="flex items-center gap-3 p-2 hover:bg-gray-100 cursor-pointer rounded"
+                                    >
+                                        <img
+                                            src={
+                                                result.image ||
+                                                "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
+                                            }
+                                            alt={result.name}
+                                            className="w-10 h-10 object-cover rounded"
+                                        />
+                                        <span className="text-sm">{result.name}</span>
+                                    </button>
+                                ))}
                             </>
                         )}
                     </div>

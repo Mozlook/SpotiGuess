@@ -88,9 +88,14 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 	case "players":
 		allTracks = tracksFromPlayers(room.Players, room.Code)
 	case "playlist":
-		allTracks = tracksFromPlaylist(query, token)
+		for _, url := range query{
+		allTracks =append(allTracks, tracksFromPlaylist(url, token)...)
+		}
 	case "artist":
-		allTracks = tracksFromArtist(query, token)
+
+		for _, url := range query{
+		allTracks = append(allTracks, tracksFromArtist(url, token)...)
+	}
 	default:
 		http.Error(w, "Unsupported game mode", http.StatusBadRequest)
 		return

@@ -52,7 +52,7 @@ type StartGameRequest struct {
 	RoomCode  string `json:"roomCode"`
 	HostId    string `json:"hostId"`
 	GameMode  string `json:"gameMode"`
-	QueryData string `json:"tracksData"`
+	QueryData []string `json:"tracksData"`
 }
 
 // AnswerRequest is the request body for /submit-answer.
