@@ -27,10 +27,24 @@ const RoomLobby = () => {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
     const [selectedSources, setSelectedSources] = useState<SearchItem[]>([]);
-    const [playlistUrl, setPlaylistUrl] = useState<string>("");
-    const [artistID, setArtistID] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
+
+    const getLastGame = () => {
+        const lastGameRaw = localStorage.getItem("lastGame");
+        if (lastGameRaw) {
+            try {
+                const lastGame = JSON.parse(lastGameRaw) as {
+                    gameMode: GameMode;
+                    selectedSources: SearchItem[];
+                };
+                setGameMode(lastGame?.gameMode ?? "players");
+                setSelectedSources(lastGame?.selectedSources ?? []);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    };
     // Start game
     const StartGame = async () => {
         try {
@@ -57,6 +71,13 @@ const RoomLobby = () => {
             });
 
             if (res.data.status) {
+                localStorage.setItem(
+                    "lastGame",
+                    JSON.stringify({
+                        gameMode,
+                        selectedSources,
+                    }),
+                );
                 navigate(`/room/${code}`);
             }
         } catch (err) {
@@ -126,6 +147,12 @@ const RoomLobby = () => {
                         You are the host
                     </p>
                     <button
+                        onClick={getLastGame}
+                        className="bg-green-900 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow"
+                    >
+                        Load previous game
+                    </button>
+                    <button
                         onClick={StartGame}
                         disabled={loading}
                         className={`${loading ? "bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"} text-white font-semibold py-2 px-6 rounded shadow`}
@@ -154,16 +181,11 @@ const RoomLobby = () => {
                         {(gameMode === "playlist" || gameMode === "artist") && (
                             <>
                                 {selectedSources.length > 0 && (
-                                    <>
+                                    <div className="flex flex-wrap gap-3">
                                         {selectedSources.map((source) => (
-                                            <button
+                                            <div
                                                 key={source.id}
-                                                className="flex items-center gap-3 p-2 hover:bg-gray-100 cursor-pointer rounded"
-                                                onClick={() =>
-                                                    setSelectedSources((prev) =>
-                                                        prev.filter((s) => s.id !== source.id),
-                                                    )
-                                                }
+                                                className="inline-flex items-center gap-3 bg-gray-500 text-white px-4 py-2 rounded-lg shadow-md"
                                             >
                                                 <img
                                                     src={
@@ -171,13 +193,26 @@ const RoomLobby = () => {
                                                         "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
                                                     }
                                                     alt={source.name}
-                                                    className="w-10 h-10 object-cover rounded"
+                                                    className="w-8 h-8 object-cover rounded"
                                                 />
-                                                <span className="text-sm">{source.name}</span>
-                                            </button>
+                                                <span className="text-base font-medium">
+                                                    {source.name}
+                                                </span>
+                                                <button
+                                                    onClick={() =>
+                                                        setSelectedSources((prev) =>
+                                                            prev.filter((s) => s.id !== source.id),
+                                                        )
+                                                    }
+                                                    className="ml-2 text-white hover:text-red-400 font-bold text-lg"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
                                         ))}
-                                    </>
+                                    </div>
                                 )}
+
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -196,31 +231,37 @@ const RoomLobby = () => {
                                     </button>
                                 </div>
 
-                                {searchResults.map((result) => (
-                                    <button
-                                        key={result.id}
-                                        onClick={() => {
-                                            setSelectedSources((prev) =>
-                                                prev.some((s) => s.id === result.id)
-                                                    ? prev
-                                                    : [...prev, result],
-                                            );
-                                            setSearchQuery(result.name);
-                                            setSearchResults([]);
-                                        }}
-                                        className="flex items-center gap-3 p-2 hover:bg-gray-100 cursor-pointer rounded"
-                                    >
-                                        <img
-                                            src={
-                                                result.image ||
-                                                "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
-                                            }
-                                            alt={result.name}
-                                            className="w-10 h-10 object-cover rounded"
-                                        />
-                                        <span className="text-sm">{result.name}</span>
-                                    </button>
-                                ))}
+                                {searchResults.length > 0 && (
+                                    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-md p-2 flex flex-col gap-2">
+                                        {searchResults.map((result) => (
+                                            <button
+                                                key={result.id}
+                                                onClick={() => {
+                                                    setSelectedSources((prev) =>
+                                                        prev.some((s) => s.id === result.id)
+                                                            ? prev
+                                                            : [...prev, result],
+                                                    );
+                                                    setSearchQuery(result.name);
+                                                    setSearchResults([]);
+                                                }}
+                                                className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 transition"
+                                            >
+                                                <img
+                                                    src={
+                                                        result.image ||
+                                                        "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
+                                                    }
+                                                    alt={result.name}
+                                                    className="w-10 h-10 object-cover rounded"
+                                                />
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    {result.name}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
