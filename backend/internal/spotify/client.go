@@ -113,7 +113,6 @@ func SearchSpotifyHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Spotify search failed", http.StatusBadGateway)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
 }
