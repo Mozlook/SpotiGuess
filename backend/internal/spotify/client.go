@@ -4,7 +4,6 @@ import (
 	"backend/internal/model"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
