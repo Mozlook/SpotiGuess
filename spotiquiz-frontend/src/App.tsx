@@ -4,10 +4,12 @@ import SpotifyCallback from "./components/SpotifyCallback";
 import GamePage from "./pages/GamePage";
 import RoomLobby from "./pages/RoomLobby";
 import ScoreboardPage from "./pages/ScoreboardPage";
+import QRLoginPage from "./pages/QRLoginPage";
 export default function App() {
     return (
         <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/:code" element={<QRLoginPage />} />
             <Route path="/callback" element={<SpotifyCallback />} />
             <Route path="/room/:code" element={<GamePage />} />
             <Route path="/room/:code/lobby" element={<RoomLobby />} />

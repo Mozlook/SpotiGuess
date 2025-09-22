@@ -1,21 +1,22 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
 
-type GameMode = "players" | "playlist" | "artist";
+import SourcesColumn from "@/components/lobby/SourcesColumn";
+import ShareStartColumn from "@/components/lobby/ShareStartColumn";
+import PlayersColumn from "@/components/lobby/PlayersColumn";
 
-type SearchItem = {
-    id: string;
-    name: string;
-    image: string;
-};
+import type { GameMode, SearchItem } from "@/types/lobby";
+
 const RoomLobby = () => {
     const { code } = useParams();
     const location = useLocation();
-    const playerName = location.state;
+    const playerName = location.state as string | null;
+
     const isHost: boolean = localStorage.getItem("isHost") === "true";
     const playerID: string | null = localStorage.getItem("spotify_id");
     const token = localStorage.getItem("access_token");
+
     const apiUrl: string = import.meta.env.VITE_BACKEND_API_URL;
     const wsUrl: string = import.meta.env.VITE_BACKEND_WS_URL;
     const navigate = useNavigate();
@@ -30,27 +31,32 @@ const RoomLobby = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const getLastGame = () => {
+    const getLastGame = useCallback(() => {
         const lastGameRaw = localStorage.getItem("lastGame");
-        if (lastGameRaw) {
-            try {
-                const lastGame = JSON.parse(lastGameRaw) as {
-                    gameMode: GameMode;
-                    selectedSources: SearchItem[];
-                };
-                setGameMode(lastGame?.gameMode ?? "players");
-                setSelectedSources(lastGame?.selectedSources ?? []);
-            } catch (err) {
-                console.log(err);
-            }
+        if (!lastGameRaw) return;
+        try {
+            const lastGame = JSON.parse(lastGameRaw) as {
+                gameMode: GameMode;
+                selectedSources: SearchItem[];
+            };
+            setGameMode(lastGame?.gameMode ?? "players");
+            setSelectedSources(lastGame?.selectedSources ?? []);
+            setSearchQuery("");
+            setSearchResults([]);
+        } catch (err) {
+            console.log(err);
         }
-    };
-    // Start game
-    const StartGame = async () => {
+    }, []);
+
+    const StartGame = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
-            if (selectedSources.length === 0) {
+
+            if (
+                (gameMode === "artist" || gameMode === "playlist") &&
+                selectedSources.length === 0
+            ) {
                 setError(new Error("Select Artist or Playlist"));
                 return;
             }
@@ -84,14 +90,17 @@ const RoomLobby = () => {
             console.error(err);
             if (axios.isAxiosError(err)) {
                 setError(err);
+            } else {
+                setError(new Error("Failed to start the game"));
             }
         } finally {
             setLoading(false);
         }
-    };
+    }, [apiUrl, code, gameMode, navigate, playerID, selectedSources, token]);
 
-    // WebSocket
     useEffect(() => {
+        if (!code) return;
+
         socketRef.current = new WebSocket(
             `${wsUrl}/ws/${code}/${playerName || playerID}`,
         );
@@ -109,9 +118,9 @@ const RoomLobby = () => {
         return () => {
             socketRef.current?.close();
         };
-    }, [code, playerID, navigate, isHost, playerName, wsUrl]);
+    }, [code, playerID, isHost, playerName, wsUrl, navigate]);
 
-    const handleSearch = async () => {
+    const handleSearch = useCallback(async () => {
         if (!searchQuery || gameMode === "players") return;
 
         try {
@@ -130,163 +139,73 @@ const RoomLobby = () => {
         } catch (err) {
             console.error("Search failed", err);
         }
-    };
+    }, [apiUrl, gameMode, playerID, searchQuery, token]);
+
+    const handleChangeMode = useCallback((mode: GameMode) => {
+        setGameMode(mode);
+        setSelectedSources([]);
+        setSearchResults([]);
+        setSearchQuery("");
+    }, []);
+
+    const handleSelectSource = useCallback((item: SearchItem) => {
+        setSelectedSources((prev) =>
+            prev.some((s) => s.id === item.id) ? prev : [...prev, item],
+        );
+        setSearchQuery("");
+        setSearchResults([]);
+    }, []);
+
+    const handleRemoveSource = useCallback((id: string) => {
+        setSelectedSources((prev) => prev.filter((s) => s.id !== id));
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800 flex flex-col items-center px-6 py-12 gap-8">
-            <div className="text-center">
+        <div className="h-screen bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800 flex flex-col">
+            {/* Header */}
+            <div className="shrink-0 px-6 pt-6 pb-4 text-center">
                 <h1 className="text-3xl font-bold mb-2">Room Code</h1>
-                <p className="text-lg tracking-widest font-mono bg-gray-100 text-indigo-600 px-4 py-2 rounded shadow">
+                <p className="text-lg tracking-widest font-mono bg-gray-100 text-indigo-600 px-4 py-2 rounded shadow inline-block">
                     {code}
                 </p>
             </div>
 
             {isHost ? (
-                <div className="flex flex-col items-center gap-4 w-full max-w-md">
-                    <p className="text-lg text-indigo-700 font-medium">
-                        You are the host
-                    </p>
-                    <button
-                        onClick={getLastGame}
-                        className="bg-green-900 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow"
-                    >
-                        Load previous game
-                    </button>
-                    <button
-                        onClick={StartGame}
-                        disabled={loading}
-                        className={`${loading ? "bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"} text-white font-semibold py-2 px-6 rounded shadow`}
-                    >
-                        {loading ? "Creating questions..." : "Start Game"}
-                    </button>
-                    <p>{error?.message}</p>
+                <div className="flex-1 px-6 pb-6">
+                    <div className="h-full mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden">
+                        {/* LEFT */}
+                        <SourcesColumn
+                            gameMode={gameMode}
+                            searchQuery={searchQuery}
+                            searchResults={searchResults}
+                            selectedSources={selectedSources}
+                            onChangeGameMode={handleChangeMode}
+                            onChangeSearchQuery={setSearchQuery}
+                            onSearch={handleSearch}
+                            onSelectSource={handleSelectSource}
+                            onRemoveSource={handleRemoveSource}
+                        />
 
-                    <div className="flex flex-col gap-4 mt-6 w-full">
-                        <label className="text-sm font-medium text-gray-600">
-                            Select Game Mode:
-                        </label>
-                        <select
-                            value={gameMode}
-                            onChange={(e) => {
-                                setGameMode(e.target.value as GameMode);
-                                setSelectedSources([]);
-                            }}
-                            className="p-2 rounded border bg-white text-gray-800"
-                        >
-                            <option value="players">Based on players</option>
-                            <option value="playlist">From a playlist</option>
-                            <option value="artist">From an artist</option>
-                        </select>
+                        {/* MIDDLE */}
+                        <ShareStartColumn
+                            roomCode={code!}
+                            loading={loading}
+                            errorMessage={error?.message}
+                            onLoadPrevious={getLastGame}
+                            onStartGame={StartGame}
+                        />
 
-                        {(gameMode === "playlist" || gameMode === "artist") && (
-                            <>
-                                {selectedSources.length > 0 && (
-                                    <div className="flex flex-wrap gap-3">
-                                        {selectedSources.map((source) => (
-                                            <div
-                                                key={source.id}
-                                                className="inline-flex items-center gap-3 bg-gray-500 text-white px-4 py-2 rounded-lg shadow-md"
-                                            >
-                                                <img
-                                                    src={
-                                                        source.image ||
-                                                        "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
-                                                    }
-                                                    alt={source.name}
-                                                    className="w-8 h-8 object-cover rounded"
-                                                />
-                                                <span className="text-base font-medium">
-                                                    {source.name}
-                                                </span>
-                                                <button
-                                                    onClick={() =>
-                                                        setSelectedSources((prev) =>
-                                                            prev.filter((s) => s.id !== source.id),
-                                                        )
-                                                    }
-                                                    className="ml-2 text-white hover:text-red-400 font-bold text-lg"
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder={`Search ${gameMode}`}
-                                        value={searchQuery}
-                                        onChange={(e) => {
-                                            setSearchQuery(e.target.value);
-                                        }}
-                                        className="px-4 py-2 rounded border bg-white text-gray-800 flex-1"
-                                    />
-                                    <button
-                                        onClick={handleSearch}
-                                        className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded"
-                                    >
-                                        Search
-                                    </button>
-                                </div>
-
-                                {searchResults.length > 0 && (
-                                    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-md p-2 flex flex-col gap-2">
-                                        {searchResults.map((result) => (
-                                            <button
-                                                key={result.id}
-                                                onClick={() => {
-                                                    setSelectedSources((prev) =>
-                                                        prev.some((s) => s.id === result.id)
-                                                            ? prev
-                                                            : [...prev, result],
-                                                    );
-                                                    setSearchQuery(result.name);
-                                                    setSearchResults([]);
-                                                }}
-                                                className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 transition"
-                                            >
-                                                <img
-                                                    src={
-                                                        result.image ||
-                                                        "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-1024x1024.png"
-                                                    }
-                                                    alt={result.name}
-                                                    className="w-10 h-10 object-cover rounded"
-                                                />
-                                                <span className="text-sm font-medium text-gray-700">
-                                                    {result.name}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
+                        {/* RIGHT */}
+                        <PlayersColumn players={playersList} />
                     </div>
-
-                    {playersList.length > 0 && (
-                        <div className="bg-white border border-gray-200 rounded-lg p-5 w-full shadow-md">
-                            <h3 className="text-xl font-semibold text-center text-gray-700 mb-4">
-                                Players in Room
-                            </h3>
-                            <ul className="space-y-2">
-                                {playersList.map((player, index) => (
-                                    <li
-                                        key={index}
-                                        className="flex items-center justify-between bg-gray-100 px-4 py-2 rounded-md text-sm font-medium text-gray-800"
-                                    >
-                                        <span className="truncate">{player}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
                 </div>
             ) : (
-                <div className="text-gray-600 text-lg font-medium italic">
-                    Waiting for host to start the game...
+                <div className="flex-1 px-6 pb-6">
+                    <div className="h-full mx-auto max-w-2xl bg-white/70 backdrop-blur border border-gray-200 rounded-xl shadow-md p-8 text-center flex items-center justify-center">
+                        <p className="text-gray-600 text-lg font-medium italic">
+                            Waiting for host to start the game…
+                        </p>
+                    </div>
                 </div>
             )}
         </div>
