@@ -53,7 +53,6 @@ type similarResponse struct {
 // - The function assumes that `track.Artists` is non-empty.
 // - If the API key is missing or Last.fm returns an error, the function will fail.
 func FetchSimilar(track model.Track) ([]string, error) {
-
 	api_key := os.Getenv("LASTFM_API_KEY")
 	endpoint := fmt.Sprintf(
 		"http://ws.audioscrobbler.com/2.0/?method=track.getsimilar&track=%s&artist=%s&api_key=%s&format=json&limit=8",
@@ -63,7 +62,6 @@ func FetchSimilar(track model.Track) ([]string, error) {
 	)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -98,5 +96,4 @@ func FetchSimilar(track model.Track) ([]string, error) {
 		}
 	}
 	return titles, nil
-
 }
