@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import axios from "axios";
 import useSpotifyPlayer from "../hooks/useSpotifyPlayer";
 import TimedProgress from "./TimedProgress";
@@ -20,12 +20,16 @@ const HostGame: React.FC<Props> = ({
 }) => {
     const { playerReady } = useSpotifyPlayer(accessToken);
 
+    const displayQuestionNumber = useMemo(() => {
+        if (!question?.id || question.id.length < 2) return "";
+        return question.id.slice(1);
+    }, [question?.id]);
+
     useEffect(() => {
         const device_id = localStorage.getItem("device_id");
         if (!device_id || !accessToken || !playerReady || !window.player) return;
 
         if (view === "question" && question?.trackId) {
-            console.log(question.positionMs);
             axios
                 .put(
                     `https://api.spotify.com/v1/me/player/play?device_id=${device_id}`,
@@ -67,13 +71,32 @@ const HostGame: React.FC<Props> = ({
 
             {view === "question" && question && (
                 <>
+                    <div className="mb-2 text-gray-700">
+                        <span className="text-sm">Question </span>
+                        <span className="font-semibold text-indigo-700">
+                            {displayQuestionNumber || "—"}/10
+                        </span>
+                    </div>
+
                     <div className="w-full mb-4">
                         <TimedProgress duration={15} />
                     </div>
-                    <div className="text-center space-y-2">
-                        <p className="text-gray-600">
-                            Select the correct answer on your device!
-                        </p>
+
+                    <div className="text-center space-y-2 mb-4">
+                        <p className="text-gray-600">Pick an answer on Your phone!</p>
+                    </div>
+
+                    <div className="w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {question.options.map((option) => (
+                                <div
+                                    key={option}
+                                    className="w-full px-4 py-3 rounded-lg text-left text-sm font-medium border bg-white text-gray-800 border-gray-300 shadow-sm"
+                                >
+                                    {option}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </>
             )}

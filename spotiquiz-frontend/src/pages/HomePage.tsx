@@ -35,7 +35,7 @@ const HomePage = () => {
             }
         };
         ValidateToken();
-    }, []);
+    }, [apiUrl, player_ID]);
 
     useEffect(() => {
         if (!error) return;
@@ -94,19 +94,20 @@ const HomePage = () => {
             localStorage.setItem("isHost", "false");
             navigate(`/room/${res.data.roomCode}/lobby`, { state: name });
         } catch (err) {
-            if (axios.isAxiosError(err) && err.response?.status === 400) {
-                setError(err.response?.data);
-                setErrorTitle("Error code: 400");
-            } else if (axios.isAxiosError(err) && err.response?.status === 404) {
-                setError(err.response?.data);
-                setErrorTitle("Error code: 404");
-            } else if (axios.isAxiosError(err) && err.response?.status === 500) {
-                setError(err.response?.data);
-                setErrorTitle("Error code: 500");
-            } else if (axios.isAxiosError(err) && err.response?.status === 409) {
-                setError(err.response?.data);
-                setErrorTitle("Error code: 409");
+            if (axios.isAxiosError(err) && err.response) {
+                const handledStatuses = [400, 404, 409, 500];
+                const status = err.response.status;
+
+                if (handledStatuses.includes(status)) {
+                    setError(err.response.data);
+                    setErrorTitle(`Error code: ${status}`);
+                } else {
+                    console.error("Unhandled error:", err);
+                }
+            } else {
+                console.error("Unknown error:", err);
             }
+
             console.error(err);
             localStorage.removeItem("roomCode");
             localStorage.removeItem("isHost");
