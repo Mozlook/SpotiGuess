@@ -7,7 +7,7 @@ import {
     DialogTrigger,
     DialogClose,
 } from "./ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 type Props = {
     onConfirm: (name: string) => void;
     roomCode: string;
@@ -15,6 +15,10 @@ type Props = {
 const CustomDialog: React.FC<Props> = ({ onConfirm, roomCode }) => {
     const [name, setName] = useState<string>("");
 
+    useEffect(() => {
+        const stored = localStorage.getItem("name");
+        if (stored) setName(stored);
+    }, []);
     return (
         <Dialog>
             <DialogTrigger
@@ -37,6 +41,7 @@ const CustomDialog: React.FC<Props> = ({ onConfirm, roomCode }) => {
                 <input
                     type="text"
                     placeholder="Display name"
+                    value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-4 py-2 rounded bg-gray-100 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />

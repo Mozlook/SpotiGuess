@@ -162,7 +162,6 @@ const RoomLobby = () => {
 
     return (
         <div className="h-screen bg-gradient-to-b from-emerald-300 via-gray-200 to-emerald-100 text-gray-800 flex flex-col">
-            {/* Header */}
             <div className="shrink-0 px-6 pt-6 pb-4 text-center">
                 <h1 className="text-3xl font-bold mb-2">Room Code</h1>
                 <p className="text-lg tracking-widest font-mono bg-gray-100 text-indigo-600 px-4 py-2 rounded shadow inline-block">
@@ -173,7 +172,6 @@ const RoomLobby = () => {
             {isHost ? (
                 <div className="flex-1 px-6 pb-6">
                     <div className="h-full mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden">
-                        {/* LEFT */}
                         <SourcesColumn
                             gameMode={gameMode}
                             searchQuery={searchQuery}
@@ -186,7 +184,6 @@ const RoomLobby = () => {
                             onRemoveSource={handleRemoveSource}
                         />
 
-                        {/* MIDDLE */}
                         <ShareStartColumn
                             roomCode={code!}
                             loading={loading}
@@ -195,7 +192,6 @@ const RoomLobby = () => {
                             onStartGame={StartGame}
                         />
 
-                        {/* RIGHT */}
                         <PlayersColumn players={playersList} />
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
@@ -13,6 +13,10 @@ const QRLoginPage: React.FC = () => {
     if (!code) {
         navigate("/");
     }
+    useEffect(() => {
+        const stored = localStorage.getItem("name");
+        if (stored) setPlayerName(stored);
+    }, []);
 
     const JoinRoom = async () => {
         const token = localStorage.getItem("access_token");
