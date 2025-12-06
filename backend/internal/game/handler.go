@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -83,23 +84,38 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 	query := request.QueryData
 
 	var allTracks []model.Track
-
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 	switch mode {
 	case "players":
 		allTracks = tracksFromPlayers(room.Players, room.Code)
-	case "playlist":
-		for _, url := range query{
-		allTracks =append(allTracks, tracksFromPlaylist(url, token)...)
-		}
-	case "artist":
 
-		for _, url := range query{
-		allTracks = append(allTracks, tracksFromArtist(url, token)...)
-	}
+	case "playlist":
+		for _, url := range query {
+			wg.Add(1)
+			go func(url string) {
+				defer wg.Done()
+				mu.Lock()
+				allTracks = append(allTracks, tracksFromPlaylist(url, token)...)
+				mu.Unlock()
+			}(url)
+		}
+
+	case "artist":
+		for _, url := range query {
+			wg.Add(1)
+			go func(url string) {
+				defer wg.Done()
+				mu.Lock()
+				allTracks = append(allTracks, tracksFromArtist(url, token)...)
+				mu.Unlock()
+			}(url)
+		}
 	default:
 		http.Error(w, "Unsupported game mode", http.StatusBadRequest)
 		return
 	}
+	wg.Wait()
 
 	rand.Shuffle(len(allTracks), func(i, j int) {
 		allTracks[i], allTracks[j] = allTracks[j], allTracks[i]
@@ -138,7 +154,6 @@ func StartGameHandler(w http.ResponseWriter, r *http.Request) {
 		"status":         "started",
 		"questionsCount": len(questions),
 	})
-
 }
 
 // GetQuestionsHandler handles HTTP GET requests to /room/{code}/questions.
@@ -366,7 +381,6 @@ func GetScoreboardHandler(w http.ResponseWriter, r *http.Request) {
 		scoreData, err := store.Client.Get(store.Ctx, scoreKey).Result()
 		if err != nil {
 			log.Printf("Failed to fetch or parse score for player %s: %v", player, err)
-
 		}
 
 		score := 0
@@ -374,7 +388,6 @@ func GetScoreboardHandler(w http.ResponseWriter, r *http.Request) {
 
 			score, err = strconv.Atoi(scoreData)
 			if err != nil {
-
 				log.Println("Failed to update score:", err)
 			}
 		}
@@ -384,7 +397,6 @@ func GetScoreboardHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{
 		"scoreboard": scoreboard,
 	})
-
 }
 
 // GetNextQuestionHandler handles HTTP GET requests to /room/{code}/next-question.
@@ -469,7 +481,6 @@ func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
 
 				score, err = strconv.Atoi(data)
 				if err != nil {
-
 					log.Println("Failed to update score:", err)
 				}
 			}
@@ -515,5 +526,4 @@ func GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
 		"index":    currentQuestionIdx,
 		"total":    len(questions),
 	})
-
 }
